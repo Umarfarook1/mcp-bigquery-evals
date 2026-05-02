@@ -8,6 +8,7 @@ def describe_table(client: BigQueryClient, table_id: str) -> dict[str, object]:
     except KeyError:
         return {"error": "table_not_found", "table_id": table_id}
     return {
+        "id": schema.table.id,
         "row_count": schema.table.row_count,
         "size_bytes": schema.table.size_bytes,
         "columns": [

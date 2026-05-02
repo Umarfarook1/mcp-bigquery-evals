@@ -9,6 +9,7 @@ FIXTURE = Path(__file__).parent.parent.parent / "fixtures" / "fake_warehouse.yam
 def test_describe_table_returns_columns_and_metadata():
     client = FakeBigQueryClient.from_yaml(FIXTURE)
     result = describe_table(client, "analytics.users")
+    assert result["id"] == "analytics.users"
     assert result["row_count"] == 5
     assert result["size_bytes"] > 0
     col_names = [c["name"] for c in result["columns"]]
