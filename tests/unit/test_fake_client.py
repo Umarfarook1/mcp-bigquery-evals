@@ -103,3 +103,32 @@ def test_dry_run_returns_estimate(client: FakeBigQueryClient):
 def test_execute_invalid_sql_raises(client: FakeBigQueryClient):
     with pytest.raises(ValueError):
         client.execute("NOT A QUERY")
+
+
+def test_bq_to_sqlite_translates_backticked_two_part(client: FakeBigQueryClient):
+    out = client._bq_to_sqlite("SELECT * FROM `analytics.users`")
+    assert "analytics__users" in out
+    assert "`" not in out
+
+
+def test_bq_to_sqlite_translates_bare_two_part_for_known_tables(client: FakeBigQueryClient):
+    out = client._bq_to_sqlite("SELECT * FROM analytics.users WHERE 1=1")
+    assert "analytics__users" in out
+    assert "analytics.users" not in out
+
+
+def test_bq_to_sqlite_does_not_touch_alias_dot_columns(client: FakeBigQueryClient):
+    out = client._bq_to_sqlite(
+        "SELECT u.country FROM `analytics.users` u"
+    )
+    assert "u.country" in out  # alias ref preserved
+    assert "analytics__users" in out
+
+
+def test_table_referenced_uses_word_boundary():
+    from mcp_bigquery_evals.bq.fake import _table_referenced
+
+    assert _table_referenced("SELECT * FROM `analytics.users`", "analytics.users")
+    assert not _table_referenced(
+        "SELECT * FROM `analytics.users_extended`", "analytics.users"
+    )

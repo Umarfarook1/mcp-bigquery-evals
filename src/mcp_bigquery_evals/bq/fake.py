@@ -112,7 +112,7 @@ class FakeBigQueryClient:
         )
 
     def execute(self, sql: str) -> QueryResult:
-        translated = _bq_to_sqlite(sql)
+        translated = self._bq_to_sqlite(sql)
         start = time.perf_counter()
         try:
             cur = self._conn.execute(translated)
@@ -128,6 +128,35 @@ class FakeBigQueryClient:
             ms=ms,
         )
 
+    def _bq_to_sqlite(self, sql: str) -> str:
+        """Translate the small subset of BQ syntax we need for fixture-backed tests:
+        - `dataset.table` backticked references → dataset__table
+        - bare dataset.table references (matching a known table) → dataset__table
+
+        Bare-ref translation only matches IDs in self._tables to avoid touching
+        alias.column references like `u.country`.
+        """
+        # 1. Backticked: `analytics.users` → analytics__users
+        sql = re.sub(
+            r"`([A-Za-z_][A-Za-z0-9_]*)\.([A-Za-z_][A-Za-z0-9_]*)`",
+            r"\1__\2",
+            sql,
+        )
+        # 2. Bare refs: only translate IDs we know about, with word-boundary anchors
+        for tid in self._tables:
+            pattern = rf"(?<![A-Za-z0-9_`]){re.escape(tid)}(?![A-Za-z0-9_])"
+            sql = re.sub(pattern, _sqlite_name(tid), sql)
+        return sql
+
+    def close(self) -> None:
+        self._conn.close()
+
+    def __del__(self) -> None:
+        # Best-effort cleanup; safe even if __init__ raised before _conn was set.
+        conn = getattr(self, "_conn", None)
+        if conn is not None:
+            conn.close()
+
 
 # ---- Helpers ----
 
@@ -141,22 +170,11 @@ def _sqlite_name(table_id: str) -> str:
 
 
 def _table_referenced(sql: str, table_id: str) -> bool:
-    """Loose check: BQ identifier with backticks or bare appears in SQL."""
-    pattern = rf"`?{re.escape(table_id)}`?"
-    return re.search(pattern, sql) is not None
+    """Loose check: does this BQ table_id appear as a token (not as a substring) in SQL?
 
-
-def _bq_to_sqlite(sql: str) -> str:
-    """Translate the small subset of BQ syntax we need for fixture-backed tests:
-    - `dataset.table` backticked references → dataset__table
-    - bare dataset.table references         → dataset__table
+    Uses negative-lookbehind/lookahead to enforce word-boundary semantics so that
+    `analytics.users` does NOT match inside `analytics.users_extended`. Backtick is
+    not in [A-Za-z0-9_] so it acts as a boundary naturally.
     """
-    # Backticked: `analytics.users` → analytics__users (no quotes — sqlite identifier)
-    sql = re.sub(
-        r"`([A-Za-z_][A-Za-z0-9_]*)\.([A-Za-z_][A-Za-z0-9_]*)`",
-        r"\1__\2",
-        sql,
-    )
-    # Bare: analytics.users → analytics__users (don't touch column refs like u.country)
-    # We only translate identifiers we know about.
-    return sql
+    pattern = rf"(?<![A-Za-z0-9_]){re.escape(table_id)}(?![A-Za-z0-9_])"
+    return re.search(pattern, sql) is not None
