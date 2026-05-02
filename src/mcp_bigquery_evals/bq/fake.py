@@ -112,7 +112,7 @@ class FakeBigQueryClient:
             estimated_usd=bytes_scanned * _USD_PER_BYTE,
         )
 
-    def execute(self, sql: str) -> QueryResult:
+    def execute(self, sql: str, dry_run_result: DryRunResult | None = None) -> QueryResult:
         translated = self._bq_to_sqlite(sql)
         start = time.perf_counter()
         try:
@@ -121,7 +121,7 @@ class FakeBigQueryClient:
         except sqlite3.Error as e:
             raise ValueError(f"SQL execution failed: {e}") from e
         ms = int((time.perf_counter() - start) * 1000)
-        dr = self.dry_run(sql)
+        dr = dry_run_result if dry_run_result is not None else self.dry_run(sql)
         return QueryResult(
             rows=rows,
             bytes_scanned=dr.bytes_scanned,

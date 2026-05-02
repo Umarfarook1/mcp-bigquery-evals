@@ -138,7 +138,7 @@ class RealBigQueryClient:
             estimated_usd=bytes_scanned * _USD_PER_BYTE,
         )
 
-    def execute(self, sql: str) -> QueryResult:
+    def execute(self, sql: str, dry_run_result: DryRunResult | None = None) -> QueryResult:
         self._assert_open()
         import time as _time
 
@@ -149,11 +149,18 @@ class RealBigQueryClient:
         except GoogleAPICallError as exc:
             raise translate_bq_exception(exc) from exc
         elapsed_ms = int((_time.perf_counter() - start) * 1000)
-        bytes_scanned = int(getattr(job, "total_bytes_processed", 0) or 0)
+
+        if dry_run_result is not None:
+            bytes_scanned = dry_run_result.bytes_scanned
+            cost_usd = dry_run_result.estimated_usd
+        else:
+            bytes_scanned = int(getattr(job, "total_bytes_processed", 0) or 0)
+            cost_usd = bytes_scanned * _USD_PER_BYTE
+
         return QueryResult(
             rows=rows,
             bytes_scanned=bytes_scanned,
-            cost_usd=bytes_scanned * _USD_PER_BYTE,
+            cost_usd=cost_usd,
             ms=elapsed_ms,
         )
 
