@@ -33,7 +33,12 @@ def make_anthropic_model(model_id: str = "claude-haiku-4-5") -> Any:
             messages=[{"role": "user", "content": prompt["user"]}],
         )
         text = "".join(block.text for block in response.content if hasattr(block, "text"))
-        return _strip_markdown_fences(text).strip()
+        sql = _strip_markdown_fences(text).strip()
+        if not sql:
+            raise RuntimeError(
+                f"Model {model_id!r} returned no text content after stripping markdown fences"
+            )
+        return sql
 
     return call
 

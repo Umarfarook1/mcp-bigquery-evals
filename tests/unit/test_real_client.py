@@ -104,14 +104,17 @@ def test_list_tables_for_unknown_dataset_returns_empty(real_client: RealBigQuery
     assert client.list_tables("nonexistent") == []
 
 
-def test_list_tables_propagates_non_structural_errors() -> None:
+def test_list_tables_translates_non_structural_errors_to_bigquery_error() -> None:
     from google.api_core.exceptions import ServiceUnavailable
+
+    from mcp_bigquery_evals.bq.errors import BigQueryError
 
     mock = MagicMock()
     mock.list_tables.side_effect = ServiceUnavailable("transient")
     client = RealBigQueryClient(project="myproj", _client=mock)
-    with pytest.raises(ServiceUnavailable):
+    with pytest.raises(BigQueryError) as exc_info:
         client.list_tables("analytics")
+    assert exc_info.value.code == "unknown"
 
 
 def test_list_tables_handles_null_num_rows(mock_bq: MagicMock) -> None:

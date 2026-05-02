@@ -1,7 +1,7 @@
 [project]
 name = "mcp-bigquery-evals"
 version = "0.1.0"
-description = "An MCP server for BigQuery exploration with cost guardrails and a built-in NL→SQL eval harness."
+description = "An MCP server for BigQuery exploration with cost guardrails and a built-in NL-to-SQL eval harness."
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }
