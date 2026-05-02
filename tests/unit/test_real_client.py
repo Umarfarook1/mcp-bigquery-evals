@@ -96,11 +96,60 @@ def test_list_tables_for_known_dataset(real_client: RealBigQueryClient) -> None:
 
 
 def test_list_tables_for_unknown_dataset_returns_empty(real_client: RealBigQueryClient) -> None:
-    # Mock raises if asked for nonexistent; client should return [] gracefully
+    from google.api_core.exceptions import NotFound
+
     mock = MagicMock()
-    mock.list_tables.side_effect = Exception("not found")
+    mock.list_tables.side_effect = NotFound("dataset not found")
     client = RealBigQueryClient(project="myproj", _client=mock)
     assert client.list_tables("nonexistent") == []
+
+
+def test_list_tables_propagates_non_structural_errors() -> None:
+    from google.api_core.exceptions import ServiceUnavailable
+
+    mock = MagicMock()
+    mock.list_tables.side_effect = ServiceUnavailable("transient")
+    client = RealBigQueryClient(project="myproj", _client=mock)
+    with pytest.raises(ServiceUnavailable):
+        client.list_tables("analytics")
+
+
+def test_list_tables_handles_null_num_rows(mock_bq: MagicMock) -> None:
+    """Streaming/external tables return None for num_rows; we must coerce to 0."""
+    t_streaming = MagicMock()
+    t_streaming.table_id = "live_stream"
+    mock_bq.list_tables.side_effect = lambda ds: (
+        [t_streaming] if (ds == "analytics" or getattr(ds, "dataset_id", "") == "analytics") else []
+    )
+
+    def _get_table_with_null_rows(table_ref: object) -> MagicMock:
+        t = MagicMock()
+        t.table_id = "live_stream"
+        t.num_rows = None  # streaming table without materialized stats
+        t.num_bytes = None
+        t.schema = []
+        return t
+
+    mock_bq.get_table.side_effect = _get_table_with_null_rows
+
+    client = RealBigQueryClient(project="myproj", _client=mock_bq)
+    tables = client.list_tables("analytics")
+    assert len(tables) == 1
+    assert tables[0].row_count == 0
+    assert tables[0].size_bytes == 0
+
+
+def test_list_datasets_empty_project() -> None:
+    mock = MagicMock()
+    mock.list_datasets.return_value = []
+    client = RealBigQueryClient(project="myproj", _client=mock)
+    assert client.list_datasets() == []
+
+
+def test_method_calls_after_close_raise_clear_error(real_client: RealBigQueryClient) -> None:
+    real_client.close()
+    with pytest.raises(RuntimeError, match="closed"):
+        real_client.list_datasets()
 
 
 def test_close_idempotent(real_client: RealBigQueryClient) -> None:

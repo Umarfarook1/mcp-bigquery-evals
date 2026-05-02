@@ -14,6 +14,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from google.api_core.exceptions import NotFound, PermissionDenied
 from google.cloud import bigquery
 
 from mcp_bigquery_evals.bq.types import (
@@ -33,11 +34,17 @@ class RealBigQueryClient:
         self._project = project
         self._client: Any = _client if _client is not None else bigquery.Client(project=project)
 
+    def _assert_open(self) -> None:
+        if self._client is None:
+            raise RuntimeError("RealBigQueryClient has been closed; create a new instance.")
+
     # ---- BigQueryClient Protocol ----
 
     def list_datasets(self) -> list[Dataset]:
+        self._assert_open()
         result: list[Dataset] = []
         for ds_item in self._client.list_datasets():
+            # TODO(perf): N+1 — each get_dataset is a serial round trip; consider concurrent fetch.
             ds = self._client.get_dataset(ds_item.dataset_id)
             result.append(
                 Dataset(
@@ -49,13 +56,16 @@ class RealBigQueryClient:
         return result
 
     def list_tables(self, dataset_id: str) -> list[Table]:
+        self._assert_open()
         try:
             items = list(self._client.list_tables(dataset_id))
-        except Exception:
+        except (NotFound, PermissionDenied):
             # Treat missing/inaccessible datasets as empty (T6 will refine error contract)
             return []
+        # Other exceptions (ServiceUnavailable, network errors) propagate to caller
         result: list[Table] = []
         for t_item in items:
+            # TODO(perf): N+1 — each get_table is a serial round trip; consider concurrent fetch.
             t = self._client.get_table(f"{dataset_id}.{t_item.table_id}")
             result.append(
                 Table(
@@ -67,15 +77,19 @@ class RealBigQueryClient:
         return result
 
     def get_table(self, table_id: str) -> TableSchema:
+        self._assert_open()
         raise NotImplementedError  # Task 4
 
     def sample_rows(self, table_id: str, n: int) -> list[dict[str, object]]:
+        self._assert_open()
         raise NotImplementedError  # Task 4
 
     def dry_run(self, sql: str) -> DryRunResult:
+        self._assert_open()
         raise NotImplementedError  # Task 5
 
     def execute(self, sql: str) -> QueryResult:
+        self._assert_open()
         raise NotImplementedError  # Task 5
 
     def close(self) -> None:
@@ -86,3 +100,12 @@ class RealBigQueryClient:
             except Exception:
                 pass
             self._client = None
+
+    def __del__(self) -> None:
+        # Best-effort cleanup; safe even if __init__ raised before _client was set.
+        client = getattr(self, "_client", None)
+        if client is not None:
+            try:
+                client.close()
+            except Exception:
+                pass
