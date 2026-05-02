@@ -59,3 +59,8 @@ files = ["src"]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 testpaths = ["tests"]
+markers = [
+    "bq: integration test that hits real BigQuery (requires BIGQUERY_PROJECT + ADC). Run with `pytest -m bq`.",
+    "live: end-to-end test that hits real BQ AND real Anthropic API (requires API keys). Run with `pytest -m live`.",
+]
+addopts = "-m 'not bq and not live'"
