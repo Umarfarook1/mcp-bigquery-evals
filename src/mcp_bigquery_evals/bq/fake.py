@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import re
+import sqlite3
+import time
 from pathlib import Path
 from typing import Any
 
@@ -14,12 +17,13 @@ from mcp_bigquery_evals.bq.types import (
     TableSchema,
 )
 
+# BigQuery on-demand pricing: $5 per TB scanned. We estimate using the same rate
+# in the fake so cost numbers in tests match the production formula.
+_USD_PER_BYTE = 5.0 / (1024**4)
+
 
 class FakeBigQueryClient:
-    """In-memory BigQueryClient for unit tests and credential-free local dev.
-
-    Loads schema + rows from a yaml fixture; executes SQL via sqlite under the hood.
-    """
+    """In-memory BigQueryClient backed by sqlite for SQL execution."""
 
     def __init__(
         self,
@@ -30,6 +34,11 @@ class FakeBigQueryClient:
         self._datasets = datasets
         self._tables = tables
         self._rows = rows
+        self._conn = sqlite3.connect(":memory:")
+        self._conn.row_factory = sqlite3.Row
+        self._load_into_sqlite()
+
+    # ---- Construction ----
 
     @classmethod
     def from_yaml(cls, path: Path) -> FakeBigQueryClient:
@@ -55,6 +64,22 @@ class FakeBigQueryClient:
             rows[t["id"]] = t_rows
         return cls(datasets=datasets, tables=tables, rows=rows)
 
+    def _load_into_sqlite(self) -> None:
+        """Create one sqlite table per BQ table; sqlite identifier = BQ table_id with '.' → '__'."""
+        cur = self._conn.cursor()
+        for tid, schema in self._tables.items():
+            sqlite_name = _sqlite_name(tid)
+            cols_sql = ", ".join(f'"{c.name}"' for c in schema.columns)
+            cur.execute(f'CREATE TABLE "{sqlite_name}" ({cols_sql})')
+            for row in self._rows.get(tid, []):
+                placeholders = ", ".join("?" for _ in schema.columns)
+                values = [row.get(c.name) for c in schema.columns]
+                cur.execute(
+                    f'INSERT INTO "{sqlite_name}" ({cols_sql}) VALUES ({placeholders})',
+                    values,
+                )
+        self._conn.commit()
+
     # ---- BigQueryClient Protocol ----
 
     def list_datasets(self) -> list[Dataset]:
@@ -75,12 +100,63 @@ class FakeBigQueryClient:
         return list(self._rows[table_id][:n])
 
     def dry_run(self, sql: str) -> DryRunResult:
-        raise NotImplementedError  # Task 7
+        # Estimate: sum of size_bytes for every table referenced in the SQL.
+        bytes_scanned = sum(
+            self._tables[tid].table.size_bytes
+            for tid in self._tables
+            if _table_referenced(sql, tid)
+        )
+        return DryRunResult(
+            bytes_scanned=bytes_scanned,
+            estimated_usd=bytes_scanned * _USD_PER_BYTE,
+        )
 
     def execute(self, sql: str) -> QueryResult:
-        raise NotImplementedError  # Task 7
+        translated = _bq_to_sqlite(sql)
+        start = time.perf_counter()
+        try:
+            cur = self._conn.execute(translated)
+            rows = [dict(r) for r in cur.fetchall()]
+        except sqlite3.Error as e:
+            raise ValueError(f"SQL execution failed: {e}") from e
+        ms = int((time.perf_counter() - start) * 1000)
+        dr = self.dry_run(sql)
+        return QueryResult(
+            rows=rows,
+            bytes_scanned=dr.bytes_scanned,
+            cost_usd=dr.estimated_usd,
+            ms=ms,
+        )
 
+
+# ---- Helpers ----
 
 def _estimate_size_bytes(columns: list[Column], rows: list[dict[str, Any]]) -> int:
-    """Crude size estimate: 32 bytes per cell, for unit-test purposes only."""
+    """Crude estimate: 32 bytes per cell."""
     return len(columns) * len(rows) * 32
+
+
+def _sqlite_name(table_id: str) -> str:
+    return table_id.replace(".", "__")
+
+
+def _table_referenced(sql: str, table_id: str) -> bool:
+    """Loose check: BQ identifier with backticks or bare appears in SQL."""
+    pattern = rf"`?{re.escape(table_id)}`?"
+    return re.search(pattern, sql) is not None
+
+
+def _bq_to_sqlite(sql: str) -> str:
+    """Translate the small subset of BQ syntax we need for fixture-backed tests:
+    - `dataset.table` backticked references → dataset__table
+    - bare dataset.table references         → dataset__table
+    """
+    # Backticked: `analytics.users` → analytics__users (no quotes — sqlite identifier)
+    sql = re.sub(
+        r"`([A-Za-z_][A-Za-z0-9_]*)\.([A-Za-z_][A-Za-z0-9_]*)`",
+        r"\1__\2",
+        sql,
+    )
+    # Bare: analytics.users → analytics__users (don't touch column refs like u.country)
+    # We only translate identifiers we know about.
+    return sql

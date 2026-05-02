@@ -63,3 +63,43 @@ def test_sample_rows_caps_at_total(client: FakeBigQueryClient):
 def test_sample_rows_unknown_table_raises(client: FakeBigQueryClient):
     with pytest.raises(KeyError):
         client.sample_rows("analytics.nonexistent", n=1)
+
+
+def test_execute_select_count(client: FakeBigQueryClient):
+    r = client.execute("SELECT COUNT(*) AS n FROM `analytics.users`")
+    assert r.rows == [{"n": 5}]
+    assert r.bytes_scanned > 0
+    assert r.cost_usd >= 0
+    assert r.ms >= 0
+
+
+def test_execute_select_filter(client: FakeBigQueryClient):
+    r = client.execute(
+        "SELECT user_id FROM `analytics.users` WHERE country = 'IN' ORDER BY user_id"
+    )
+    assert r.rows == [{"user_id": "u3"}, {"user_id": "u5"}]
+
+
+def test_execute_join(client: FakeBigQueryClient):
+    r = client.execute(
+        "SELECT u.country, COUNT(*) AS events "
+        "FROM `analytics.users` u "
+        "JOIN `analytics.events` e ON u.user_id = e.user_id "
+        "GROUP BY u.country "
+        "ORDER BY u.country"
+    )
+    assert r.rows == [
+        {"country": "IN", "events": 3},
+        {"country": "US", "events": 3},
+    ]
+
+
+def test_dry_run_returns_estimate(client: FakeBigQueryClient):
+    r = client.dry_run("SELECT * FROM `analytics.users`")
+    assert r.bytes_scanned > 0
+    assert r.estimated_usd >= 0
+
+
+def test_execute_invalid_sql_raises(client: FakeBigQueryClient):
+    with pytest.raises(ValueError):
+        client.execute("NOT A QUERY")
