@@ -216,3 +216,62 @@ def test_sample_rows_zero_n(mock_bq: MagicMock) -> None:
     client = RealBigQueryClient(project="myproj", _client=mock_bq)
     rows = client.sample_rows("analytics.users", n=0)
     assert rows == []
+
+
+def test_dry_run_returns_estimate(mock_bq: MagicMock) -> None:
+    job = MagicMock()
+    job.total_bytes_processed = 1_000_000_000  # 1 GB
+    mock_bq.query.return_value = job
+    client = RealBigQueryClient(project="myproj", _client=mock_bq)
+
+    result = client.dry_run("SELECT * FROM `analytics.users`")
+    assert result.bytes_scanned == 1_000_000_000
+    # 1 GB / (1 TB) * $5 ≈ $0.00488...
+    assert 0.004 < result.estimated_usd < 0.006
+
+    # Verify the dry-run flag was set
+    call = mock_bq.query.call_args
+    job_config = call.kwargs.get("job_config")
+    assert job_config is not None
+    assert job_config.dry_run is True
+    assert job_config.use_query_cache is False
+
+
+def test_dry_run_handles_null_total_bytes(mock_bq: MagicMock) -> None:
+    """If BQ returns None for total_bytes_processed, we should treat as 0."""
+    job = MagicMock()
+    job.total_bytes_processed = None
+    mock_bq.query.return_value = job
+    client = RealBigQueryClient(project="myproj", _client=mock_bq)
+
+    result = client.dry_run("SELECT 1")
+    assert result.bytes_scanned == 0
+    assert result.estimated_usd == 0.0
+
+
+def test_execute_returns_rows(mock_bq: MagicMock) -> None:
+    job = MagicMock()
+    row1 = MagicMock()
+    row1.items.return_value = [("n", 5)]
+    job.result.return_value = [row1]
+    job.total_bytes_processed = 2048
+    mock_bq.query.return_value = job
+
+    client = RealBigQueryClient(project="myproj", _client=mock_bq)
+    result = client.execute("SELECT COUNT(*) AS n FROM `analytics.users`")
+    assert result.rows == [{"n": 5}]
+    assert result.bytes_scanned == 2048
+    assert result.cost_usd >= 0
+    assert result.ms >= 0
+
+
+def test_execute_returns_empty_for_zero_rows(mock_bq: MagicMock) -> None:
+    job = MagicMock()
+    job.result.return_value = []
+    job.total_bytes_processed = 1024
+    mock_bq.query.return_value = job
+
+    client = RealBigQueryClient(project="myproj", _client=mock_bq)
+    result = client.execute("SELECT * FROM `t` WHERE 1=0")
+    assert result.rows == []
+    assert result.bytes_scanned == 1024
