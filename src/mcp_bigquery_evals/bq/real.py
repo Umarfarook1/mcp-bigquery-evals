@@ -26,6 +26,9 @@ from mcp_bigquery_evals.bq.types import (
     TableSchema,
 )
 
+# BigQuery on-demand pricing: $5 per TB scanned.
+_USD_PER_BYTE = 5.0 / (1024**4)
+
 
 class RealBigQueryClient:
     """Production BigQueryClient backed by google-cloud-bigquery."""
@@ -105,11 +108,29 @@ class RealBigQueryClient:
 
     def dry_run(self, sql: str) -> DryRunResult:
         self._assert_open()
-        raise NotImplementedError  # Task 5
+        job_config = bigquery.QueryJobConfig(dry_run=True, use_query_cache=False)
+        job = self._client.query(sql, job_config=job_config)
+        bytes_scanned = int(job.total_bytes_processed or 0)
+        return DryRunResult(
+            bytes_scanned=bytes_scanned,
+            estimated_usd=bytes_scanned * _USD_PER_BYTE,
+        )
 
     def execute(self, sql: str) -> QueryResult:
         self._assert_open()
-        raise NotImplementedError  # Task 5
+        import time as _time
+
+        start = _time.perf_counter()
+        job = self._client.query(sql)
+        rows = [dict(row.items()) for row in job.result()]
+        elapsed_ms = int((_time.perf_counter() - start) * 1000)
+        bytes_scanned = int(getattr(job, "total_bytes_processed", 0) or 0)
+        return QueryResult(
+            rows=rows,
+            bytes_scanned=bytes_scanned,
+            cost_usd=bytes_scanned * _USD_PER_BYTE,
+            ms=elapsed_ms,
+        )
 
     def close(self) -> None:
         client = getattr(self, "_client", None)
