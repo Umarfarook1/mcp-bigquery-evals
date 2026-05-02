@@ -1,19 +1,52 @@
+# Python
 __pycache__/
 *.py[cod]
 *.egg-info/
 build/
 dist/
+
+# Virtual envs
 .venv/
 venv/
-.env
-.env.local
+env/
+
+# Test / lint / type caches
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
-*.log
-.DS_Store
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
 
-# Local credentials — never commit
+# Logs + temp
+*.log
+*.tmp
+
+# Environment + secrets (never commit)
+.env*
+!.env.example
 *-credentials.json
 *-sa.json
 service-account*.json
+.envrc
+
+# Local sqlite (for ad-hoc testing)
+*.db
+*.sqlite
+*.sqlite3
+
+# Local eval runs (CI writes evals/latest.json which IS tracked)
+evals/last_report.json
+
+# IDE / editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
