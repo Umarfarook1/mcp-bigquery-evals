@@ -18,7 +18,6 @@ from google.api_core.exceptions import (
     GoogleAPICallError,
     NotFound,
     PermissionDenied,
-    Unauthenticated,
 )
 from google.cloud import bigquery
 
@@ -54,9 +53,12 @@ class RealBigQueryClient:
         self._assert_open()
         try:
             items = list(self._client.list_datasets())
-        except (NotFound, PermissionDenied, Unauthenticated):
+        except (NotFound, PermissionDenied):
             return []
-        # Other exceptions (ServiceUnavailable, network errors) propagate
+        except GoogleAPICallError as exc:
+            raise translate_bq_exception(exc) from exc
+        # Unauthenticated and other errors propagate (they indicate setup problems
+        # the user needs to see, not "no datasets here").
 
         result: list[Dataset] = []
         for ds_item in items:
@@ -75,11 +77,12 @@ class RealBigQueryClient:
         self._assert_open()
         try:
             items = list(self._client.list_tables(dataset_id))
-        except (NotFound, PermissionDenied, Unauthenticated):
-            # Treat missing/inaccessible datasets as empty — schema-traversal callers
-            # can't distinguish "missing" from "empty" anyway; [] is least-surprising.
+        except (NotFound, PermissionDenied):
+            # Translate dataset-discovery errors that have a meaningful empty fallback;
+            # everything else propagates as BigQueryError.
             return []
-        # Other exceptions (ServiceUnavailable, network errors) propagate to caller
+        except GoogleAPICallError as exc:
+            raise translate_bq_exception(exc) from exc
         result: list[Table] = []
         for t_item in items:
             # TODO(perf): N+1 — each get_table is a serial round trip; consider concurrent fetch.

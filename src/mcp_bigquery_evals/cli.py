@@ -114,11 +114,11 @@ def _cmd_evals_run(args: argparse.Namespace) -> int:
     from mcp_bigquery_evals.evals.report import write_badge, write_report
 
     write_report(report, args.report, model_id=args.model)
-    print(f"Wrote report to {args.report}", file=sys.stderr)
+    print(f"Wrote report to {args.report.resolve()}", file=sys.stderr)
 
     badge_path = args.report.parent / "badge.json"
     write_badge(report, badge_path, model_id=args.model)
-    print(f"Wrote badge to {badge_path}", file=sys.stderr)
+    print(f"Wrote badge to {badge_path.resolve()}", file=sys.stderr)
 
     # Exit code: 0 on any success, 1 if all pairs failed (signal a problem), 2 already handled above
     return 0 if report.total == 0 or report.passes > 0 else 1

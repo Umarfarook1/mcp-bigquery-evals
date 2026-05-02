@@ -24,6 +24,8 @@ Two clients ship in the box: `RealBigQueryClient` (production) and `FakeBigQuery
 uvx mcp-bigquery-evals --help
 ```
 
+(First run takes ~30s while uv fetches dependencies; subsequent runs are instant from the local cache.)
+
 (Or `pip install mcp-bigquery-evals` if you prefer.)
 
 ### 2. Authenticate to GCP
@@ -43,7 +45,7 @@ Open Claude Desktop → Settings → Developer → Edit Config, then add:
       "command": "uvx",
       "args": ["mcp-bigquery-evals", "serve"],
       "env": {
-        "BIGQUERY_PROJECT": "your-personal-gcp-project-id"
+        "BIGQUERY_PROJECT": "YOUR_GCP_PROJECT_ID_HERE"
       }
     }
   }

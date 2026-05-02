@@ -181,13 +181,28 @@ def test_sample_rows_translates_not_found() -> None:
     assert exc_info.value.code == "table_not_found"
 
 
-def test_list_datasets_returns_empty_on_unauthenticated() -> None:
-    from google.api_core.exceptions import Unauthenticated
+def test_list_datasets_translates_unauthenticated_to_bigquery_error() -> None:
+    from google.api_core import exceptions as gerr
 
-    mock = MagicMock()
-    mock.list_datasets.side_effect = Unauthenticated("creds expired")
-    client = RealBigQueryClient(project="myproj", _client=mock)
-    assert client.list_datasets() == []
+    mock_bq = MagicMock()
+    mock_bq.list_datasets.side_effect = gerr.Unauthenticated("creds expired")
+    client = RealBigQueryClient(project="myproj", _client=mock_bq)
+
+    with pytest.raises(BigQueryError) as exc_info:
+        client.list_datasets()
+    assert exc_info.value.code == "unauthenticated"
+
+
+def test_list_tables_translates_unauthenticated_to_bigquery_error() -> None:
+    from google.api_core import exceptions as gerr
+
+    mock_bq = MagicMock()
+    mock_bq.list_tables.side_effect = gerr.Unauthenticated("creds expired")
+    client = RealBigQueryClient(project="myproj", _client=mock_bq)
+
+    with pytest.raises(BigQueryError) as exc_info:
+        client.list_tables("any_dataset")
+    assert exc_info.value.code == "unauthenticated"
 
 
 # ---- Tool-layer integration ----
