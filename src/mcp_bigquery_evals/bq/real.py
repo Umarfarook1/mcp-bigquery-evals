@@ -17,6 +17,7 @@ from typing import Any
 from google.api_core.exceptions import NotFound, PermissionDenied
 from google.cloud import bigquery
 
+from mcp_bigquery_evals.bq.errors import BigQueryError, translate_bq_exception
 from mcp_bigquery_evals.bq.types import (
     Column,
     Dataset,
@@ -82,7 +83,12 @@ class RealBigQueryClient:
 
     def get_table(self, table_id: str) -> TableSchema:
         self._assert_open()
-        t = self._client.get_table(table_id)
+        try:
+            t = self._client.get_table(table_id)
+        except Exception as exc:
+            if isinstance(exc, BigQueryError):
+                raise
+            raise translate_bq_exception(exc) from exc
         columns = [
             Column(
                 name=field.name,
@@ -103,13 +109,23 @@ class RealBigQueryClient:
     def sample_rows(self, table_id: str, n: int) -> list[dict[str, object]]:
         self._assert_open()
         n = max(0, n)
-        rows_iter = self._client.list_rows(table_id, max_results=n)
-        return [dict(row.items()) for row in rows_iter]
+        try:
+            rows_iter = self._client.list_rows(table_id, max_results=n)
+            return [dict(row.items()) for row in rows_iter]
+        except Exception as exc:
+            if isinstance(exc, BigQueryError):
+                raise
+            raise translate_bq_exception(exc) from exc
 
     def dry_run(self, sql: str) -> DryRunResult:
         self._assert_open()
         job_config = bigquery.QueryJobConfig(dry_run=True, use_query_cache=False)
-        job = self._client.query(sql, job_config=job_config)
+        try:
+            job = self._client.query(sql, job_config=job_config)
+        except Exception as exc:
+            if isinstance(exc, BigQueryError):
+                raise
+            raise translate_bq_exception(exc) from exc
         bytes_scanned = int(job.total_bytes_processed or 0)
         return DryRunResult(
             bytes_scanned=bytes_scanned,
@@ -121,8 +137,13 @@ class RealBigQueryClient:
         import time as _time
 
         start = _time.perf_counter()
-        job = self._client.query(sql)
-        rows = [dict(row.items()) for row in job.result()]
+        try:
+            job = self._client.query(sql)
+            rows = [dict(row.items()) for row in job.result()]
+        except Exception as exc:
+            if isinstance(exc, BigQueryError):
+                raise
+            raise translate_bq_exception(exc) from exc
         elapsed_ms = int((_time.perf_counter() - start) * 1000)
         bytes_scanned = int(getattr(job, "total_bytes_processed", 0) or 0)
         return QueryResult(
