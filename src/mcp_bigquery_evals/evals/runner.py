@@ -26,6 +26,8 @@ from mcp_bigquery_evals.evals.prompt import build_prompt
 
 ModelFn = Callable[[dict[str, str], str], str]
 
+_REQUIRED_KEYS = {"id", "dataset", "nl", "gold_sql"}
+
 
 @dataclass
 class PairResult:
@@ -39,6 +41,7 @@ class PairResult:
     bytes_scanned: int
     cost_usd: float
     latency_ms: int
+    gold_errored: bool = False  # True if gold_sql itself failed to execute
 
 
 @dataclass
@@ -46,6 +49,7 @@ class EvalReport:
     accuracy: float
     total: int
     passes: int
+    gold_errors: int  # number of pairs where gold_sql failed to execute (data quality issue)
     avg_bytes_scanned: int
     avg_latency_ms: int
     total_cost_usd: float
@@ -69,12 +73,15 @@ def run_evals(
 
     passes = sum(1 for r in per_pair if r.passed)
     total = len(per_pair)
+    gold_errors = sum(1 for r in per_pair if r.gold_errored)
+    sized = [r for r in per_pair if r.bytes_scanned > 0]
     return EvalReport(
         accuracy=passes / total if total else 0.0,
         total=total,
         passes=passes,
-        avg_bytes_scanned=int(sum(r.bytes_scanned for r in per_pair) / total) if total else 0,
-        avg_latency_ms=int(sum(r.latency_ms for r in per_pair) / total) if total else 0,
+        gold_errors=gold_errors,
+        avg_bytes_scanned=int(sum(r.bytes_scanned for r in sized) / len(sized)) if sized else 0,
+        avg_latency_ms=int(sum(r.latency_ms for r in sized) / len(sized)) if sized else 0,
         total_cost_usd=sum(r.cost_usd for r in per_pair),
         per_pair=per_pair,
     )
@@ -89,7 +96,17 @@ def report_to_dict(report: EvalReport) -> dict[str, Any]:
 
 def _load_pairs(path: Path) -> list[dict[str, Any]]:
     data = yaml.safe_load(path.read_text(encoding="utf-8"))
-    return list(data.get("golden_pairs", []))
+    pairs = list(data.get("golden_pairs", []))
+    for i, pair in enumerate(pairs):
+        if not isinstance(pair, dict):
+            raise ValueError(f"golden pair at index {i} is not a dict: {type(pair).__name__}")
+        missing = _REQUIRED_KEYS - set(pair)
+        if missing:
+            raise ValueError(
+                f"golden pair at index {i} (id={pair.get('id', '?')}) "
+                f"missing required keys: {sorted(missing)}"
+            )
+    return pairs
 
 
 def _evaluate_one(
@@ -102,24 +119,26 @@ def _evaluate_one(
     nl = str(pair["nl"])
     gold_sql = str(pair["gold_sql"]).strip()
 
+    # build_prompt failures = setup error (e.g. dataset ID mismatch); propagate.
+    prompt = build_prompt(client, dataset_id=dataset, nl=nl)
+
     predicted_sql: str | None = None
     error: str | None = None
     passed = False
     bytes_scanned = 0
     cost_usd = 0.0
+    gold_errored = False
 
     start = time.perf_counter()
 
     try:
-        prompt = build_prompt(client, dataset_id=dataset, nl=nl)
         predicted_sql = model_fn(prompt, gold_sql).strip()
 
-        # Execute both queries against the BigQueryClient.
-        # Errors at this stage = pair fails (invalid predicted SQL counts as wrong, not as a crash).
         try:
             gold_result = _execute(client, gold_sql)
         except (BigQueryError, ValueError) as exec_err:
             error = f"gold execution failed: {exec_err}"
+            gold_errored = True
             return _finalize_pair(
                 pair_id,
                 nl,
@@ -128,6 +147,7 @@ def _evaluate_one(
                 predicted_sql,
                 passed=False,
                 error=error,
+                gold_errored=gold_errored,
                 bytes_scanned=0,
                 cost_usd=0.0,
                 latency_ms=int((time.perf_counter() - start) * 1000),
@@ -145,6 +165,7 @@ def _evaluate_one(
                 predicted_sql,
                 passed=False,
                 error=error,
+                gold_errored=gold_errored,
                 bytes_scanned=0,
                 cost_usd=0.0,
                 latency_ms=int((time.perf_counter() - start) * 1000),
@@ -153,8 +174,11 @@ def _evaluate_one(
         passed = results_equal(gold_result.rows, predicted_result.rows)
         bytes_scanned = predicted_result.bytes_scanned
         cost_usd = predicted_result.cost_usd
+    except (KeyboardInterrupt, SystemExit):
+        raise
     except Exception as e:
-        error = f"runner_error: {e}"
+        # Anything else (model_fn raises, runner bug, etc.) — record as runner_error
+        error = f"runner_error: {type(e).__name__}: {e}"
         passed = False
 
     latency_ms = int((time.perf_counter() - start) * 1000)
@@ -167,6 +191,7 @@ def _evaluate_one(
         predicted_sql,
         passed=passed,
         error=error,
+        gold_errored=gold_errored,
         bytes_scanned=bytes_scanned,
         cost_usd=cost_usd,
         latency_ms=latency_ms,
@@ -190,6 +215,7 @@ def _finalize_pair(
     bytes_scanned: int,
     cost_usd: float,
     latency_ms: int,
+    gold_errored: bool = False,
 ) -> PairResult:
     return PairResult(
         id=pair_id,
@@ -202,4 +228,5 @@ def _finalize_pair(
         bytes_scanned=bytes_scanned,
         cost_usd=cost_usd,
         latency_ms=latency_ms,
+        gold_errored=gold_errored,
     )
