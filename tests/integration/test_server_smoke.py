@@ -40,12 +40,12 @@ def _parse_result(result: Any) -> Any:
     have no output schema.  We prefer the structured half when available, and
     fall back to JSON-decoding the concatenated text blocks otherwise.
     """
-    # Tuple form: (list[ContentBlock], dict) — structured output
+    # Tuple form: (list[ContentBlock], dict) - structured output
     if isinstance(result, tuple) and len(result) == 2:
         _content_blocks, structured = result
         return structured
 
-    # Plain sequence of ContentBlock — unstructured only
+    # Plain sequence of ContentBlock - unstructured only
     texts = [block.text for block in result if hasattr(block, "text")]
     text = "".join(texts)
     return json.loads(text) if text else result

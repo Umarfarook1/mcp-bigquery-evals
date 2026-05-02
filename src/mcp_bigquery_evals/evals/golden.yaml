@@ -1,9 +1,9 @@
 # Production golden NL→SQL pairs for the eval harness.
-# Targets bigquery-public-data — anyone with a GCP project can reproduce.
+# Targets bigquery-public-data - anyone with a GCP project can reproduce.
 #
 # IMPORTANT: each pair MUST be manually verified by running gold_sql against real
 # BigQuery and confirming the result matches the question's intent.
-# Currently every pair has `verified: false` — verify before relying on these
+# Currently every pair has `verified: false` - verify before relying on these
 # numbers in any published accuracy claim.
 
 golden_pairs:

@@ -33,5 +33,5 @@ jobs:
       - name: Mypy strict
         run: mypy src
 
-      - name: Pytest (unit tests only — bq and live tests are gated)
+      - name: Pytest (unit tests only - bq and live tests are gated)
         run: pytest -v

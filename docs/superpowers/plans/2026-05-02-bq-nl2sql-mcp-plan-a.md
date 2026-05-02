@@ -1,10 +1,10 @@
-# mcp-bigquery-evals — Plan A (Core MCP Server) Implementation Plan
+# mcp-bigquery-evals - Plan A (Core MCP Server) Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Ship a working stdio MCP server with all 7 read-only BigQuery tools, fully tested against an in-memory `FakeBigQueryClient`. No GCP credentials required.
 
-**Architecture:** `BigQueryClient` is a `Protocol` with two future implementations (real, fake). Plan A delivers the fake plus the entire MCP layer — tool handlers, server registration, stdio entrypoint, CLI. After Plan A, you can launch the server in Claude Desktop and exercise every tool against fixture data.
+**Architecture:** `BigQueryClient` is a `Protocol` with two future implementations (real, fake). Plan A delivers the fake plus the entire MCP layer - tool handlers, server registration, stdio entrypoint, CLI. After Plan A, you can launch the server in Claude Desktop and exercise every tool against fixture data.
 
 **Tech Stack:** Python 3.11+, `mcp` (official Python SDK), `pydantic`, `rapidfuzz`, `pyyaml`, `pytest`, `pytest-asyncio`, `ruff`, `mypy`. SQLite (stdlib) is used inside `FakeBigQueryClient` to execute SQL against fixture data.
 
@@ -309,7 +309,7 @@ class Table:
 
 @dataclass(frozen=True, slots=True)
 class TableSchema:
-    """Returned by describe_table — table metadata + column list."""
+    """Returned by describe_table - table metadata + column list."""
 
     table: Table
     columns: list[Column]
@@ -395,7 +395,7 @@ class BigQueryClient(Protocol):
 Run: `mypy src/mcp_bigquery_evals/bq/protocol.py`
 Expected: `Success: no issues found in 1 source file`.
 
-(No runtime tests for the Protocol itself — it's structural; correctness is verified by the FakeBigQueryClient tests in Tasks 5–7 which assert `isinstance(client, BigQueryClient)`.)
+(No runtime tests for the Protocol itself - it's structural; correctness is verified by the FakeBigQueryClient tests in Tasks 5–7 which assert `isinstance(client, BigQueryClient)`.)
 
 - [ ] **Step 3: Commit**
 
@@ -481,7 +481,7 @@ git commit -m "tests: add fake_warehouse.yaml fixture (2 datasets, 3 tables)"
 
 ---
 
-### Task 5: FakeBigQueryClient — discovery methods
+### Task 5: FakeBigQueryClient - discovery methods
 
 **Files:**
 - Create: `src/mcp_bigquery_evals/bq/fake.py`
@@ -651,7 +651,7 @@ git commit -m "bq: add FakeBigQueryClient discovery methods (list_datasets/table
 
 ---
 
-### Task 6: FakeBigQueryClient — sample_rows
+### Task 6: FakeBigQueryClient - sample_rows
 
 **Files:**
 - Modify: `src/mcp_bigquery_evals/bq/fake.py` (replace `sample_rows` body)
@@ -708,7 +708,7 @@ git commit -m "bq: implement FakeBigQueryClient.sample_rows (deterministic head)
 
 ---
 
-### Task 7: FakeBigQueryClient — dry_run + execute (sqlite backend)
+### Task 7: FakeBigQueryClient - dry_run + execute (sqlite backend)
 
 **Files:**
 - Modify: `src/mcp_bigquery_evals/bq/fake.py` (sqlite backend + dry_run + execute)
@@ -917,7 +917,7 @@ def _bq_to_sqlite(sql: str) -> str:
     - `dataset.table` backticked references → dataset__table
     - bare dataset.table references         → dataset__table
     """
-    # Backticked: `analytics.users` → analytics__users (no quotes — sqlite identifier)
+    # Backticked: `analytics.users` → analytics__users (no quotes - sqlite identifier)
     sql = re.sub(
         r"`([A-Za-z_][A-Za-z0-9_]*)\.([A-Za-z_][A-Za-z0-9_]*)`",
         r"\1__\2",
@@ -1131,7 +1131,7 @@ git commit -m "guardrails: add cost cap check + byte formatting"
 
 ---
 
-### Task 10: Tool — list_datasets
+### Task 10: Tool - list_datasets
 
 **Files:**
 - Create: `src/mcp_bigquery_evals/tools/__init__.py`
@@ -1202,7 +1202,7 @@ git commit -m "tools: add list_datasets"
 
 ---
 
-### Task 11: Tool — list_tables
+### Task 11: Tool - list_tables
 
 **Files:**
 - Create: `src/mcp_bigquery_evals/tools/list_tables.py`
@@ -1269,7 +1269,7 @@ git commit -m "tools: add list_tables"
 
 ---
 
-### Task 12: Tool — describe_table
+### Task 12: Tool - describe_table
 
 **Files:**
 - Create: `src/mcp_bigquery_evals/tools/describe_table.py`
@@ -1351,7 +1351,7 @@ git commit -m "tools: add describe_table"
 
 ---
 
-### Task 13: Tool — sample_table
+### Task 13: Tool - sample_table
 
 **Files:**
 - Create: `src/mcp_bigquery_evals/tools/sample_table.py`
@@ -1422,7 +1422,7 @@ git commit -m "tools: add sample_table"
 
 ---
 
-### Task 14: Tool — search_schema
+### Task 14: Tool - search_schema
 
 **Files:**
 - Create: `src/mcp_bigquery_evals/tools/search_schema.py`
@@ -1482,7 +1482,7 @@ git commit -m "tools: add search_schema (wraps schema_search helper)"
 
 ---
 
-### Task 15: Tool — estimate_cost
+### Task 15: Tool - estimate_cost
 
 **Files:**
 - Create: `src/mcp_bigquery_evals/tools/estimate_cost.py`
@@ -1541,7 +1541,7 @@ git commit -m "tools: add estimate_cost (dry-run wrapper)"
 
 ---
 
-### Task 16: Tool — run_query (with cost cap)
+### Task 16: Tool - run_query (with cost cap)
 
 **Files:**
 - Create: `src/mcp_bigquery_evals/tools/run_query.py`
@@ -1774,7 +1774,7 @@ git commit -m "server: register all 7 MCP tools; wire BigQueryClient via env"
 
 ---
 
-### Task 18: CLI — argparse with `serve` subcommand
+### Task 18: CLI - argparse with `serve` subcommand
 
 **Files:**
 - Create: `src/mcp_bigquery_evals/cli.py`
@@ -1848,7 +1848,7 @@ git commit -m "cli: add argparse entrypoint with 'serve' subcommand (evals stubb
 
 ---
 
-### Task 19: End-to-end smoke — launch server, list tools
+### Task 19: End-to-end smoke - launch server, list tools
 
 **Files:**
 - Create: `tests/integration/__init__.py`
@@ -1915,7 +1915,7 @@ Expected: both clean.
 
 ```bash
 git add tests/integration/
-git commit -m "tests: integration smoke — server builds and all 7 tools are registered"
+git commit -m "tests: integration smoke - server builds and all 7 tools are registered"
 ```
 
 - [ ] **Step 6: Tag the milestone**
@@ -1939,8 +1939,8 @@ After Task 19, the following are true:
 
 ## What's NOT in Plan A (deferred to Plan B)
 
-- `RealBigQueryClient` — wraps `google-cloud-bigquery`; needs your GCP project
-- Eval harness — `evals/golden.yaml`, runner, JSON report writer, `evals run` subcommand wired up
+- `RealBigQueryClient` - wraps `google-cloud-bigquery`; needs your GCP project
+- Eval harness - `evals/golden.yaml`, runner, JSON report writer, `evals run` subcommand wired up
 - CI workflows (`ci.yml`, `evals.yml`)
 - README beyond the placeholder
 - `claude_desktop_setup.md`, `architecture.md`, `how_evals_work.md` docs
@@ -1948,4 +1948,4 @@ After Task 19, the following are true:
 - `awesome-mcp-servers` PR
 - Blog posts
 
-Plan B is written after Plan A is complete and you've had time to use the server locally — the friction you hit during local use will sharpen what Plan B prioritizes.
+Plan B is written after Plan A is complete and you've had time to use the server locally - the friction you hit during local use will sharpen what Plan B prioritizes.

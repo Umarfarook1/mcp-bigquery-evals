@@ -31,7 +31,7 @@ Every tool handler depends on the `BigQueryClient` Protocol (PEP 544). This deco
 
 The cap is per-call; the agent may explicitly raise it. There is no global daily limit in v1 (deferred to v1.1).
 
-The `dry_run_result` is threaded through to `execute()` so a single dry-run serves both cap-checking and cost-reporting — no double round-trip to the BQ API.
+The `dry_run_result` is threaded through to `execute()` so a single dry-run serves both cap-checking and cost-reporting - no double round-trip to the BQ API.
 
 ### 3. Read-only by design
 
@@ -39,7 +39,7 @@ No `INSERT`, `UPDATE`, `DELETE`, `CREATE`, `DROP`. The blast radius of an LLM mi
 
 ### 4. No internal LLM calls in the server runtime
 
-The MCP server is deterministic. It does not call Claude, GPT, or any other LLM internally. The consumer (Claude Desktop) IS the LLM — it can summarize SQL, explain results, and reason about errors itself. Putting an LLM inside an MCP server whose only consumer is an LLM is a design smell.
+The MCP server is deterministic. It does not call Claude, GPT, or any other LLM internally. The consumer (Claude Desktop) IS the LLM - it can summarize SQL, explain results, and reason about errors itself. Putting an LLM inside an MCP server whose only consumer is an LLM is a design smell.
 
 The eval harness is a separate process (`mcp-bigquery-evals evals run`) and DOES call Anthropic's API to generate predicted SQL. It does NOT touch the MCP server runtime.
 

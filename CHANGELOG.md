@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.1.0] — 2026-05-DD
+## [0.1.0] - 2026-05-DD
 
 ### Public surface (locked)
 
@@ -33,10 +33,10 @@ Breaking changes to any of these require a major-version bump.
 - 15 golden NL-to-SQL pairs against `bigquery-public-data.samples` / `.stackoverflow` / `.usa_names` (UNVERIFIED at release; user verifies before publishing accuracy claims)
 - GitHub Actions: ruff/mypy/pytest CI on every PR; nightly evals on `main` push that auto-commits the badge
 - Documentation: README quickstart, Claude Desktop setup guide, architecture overview, eval harness walkthrough
-- PEP 561 `py.typed` marker — package ships type information to consumers
+- PEP 561 `py.typed` marker - package ships type information to consumers
 
 ### Known limitations (planned for 0.1.x / 0.2.x)
 
 - N+1 round trips in `list_datasets` / `list_tables` (will batch concurrently in 0.1.x)
 - No global cost cap env var (per-call only); a `MCP_BIGQUERY_MAX_BYTES_SCANNED` env var is on the 0.1.x roadmap
-- Multi-warehouse adapters (Snowflake, Postgres) — out of scope for v1; planned as separate package `nl2sql-evals`
+- Multi-warehouse adapters (Snowflake, Postgres) - out of scope for v1; planned as separate package `nl2sql-evals`

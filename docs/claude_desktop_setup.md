@@ -87,4 +87,4 @@ The most common cause is a missing dependency. Re-run `uvx --no-cache mcp-bigque
 The default cap is 100 MB scanned (≈ $0.0005). To raise it for a single query, ask Claude:
 > "Use the bigquery tool with max_bytes_scanned=2_000_000_000 to run [your query]"
 
-The cap is per-call; the agent can raise it explicitly for any query that needs more. There is no global default override in v0.1.0 — a `MCP_BIGQUERY_MAX_BYTES_SCANNED` env var is on the v0.1.x roadmap.
+The cap is per-call; the agent can raise it explicitly for any query that needs more. There is no global default override in v0.1.0 - a `MCP_BIGQUERY_MAX_BYTES_SCANNED` env var is on the v0.1.x roadmap.

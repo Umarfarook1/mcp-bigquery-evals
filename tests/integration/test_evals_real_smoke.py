@@ -52,7 +52,7 @@ def test_live_eval_smoke_3_pairs(real_client: RealBigQueryClient) -> None:
         limit=3,
     )
 
-    # Don't assert a specific accuracy — that's what we're measuring.
+    # Don't assert a specific accuracy - that's what we're measuring.
     # Just assert the run completed without crashing and produced sensible numbers.
     assert report.total == 3
     assert 0.0 <= report.accuracy <= 1.0

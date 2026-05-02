@@ -31,7 +31,7 @@ def build_schema_context(client: BigQueryClient, dataset_id: str) -> str:
     for table in client.list_tables(dataset_id):
         schema = client.get_table(table.id)
         col_lines = [
-            f"  - {c.name} ({c.type})" + (f" — {c.description}" if c.description else "")
+            f"  - {c.name} ({c.type})" + (f" - {c.description}" if c.description else "")
             for c in schema.columns
         ]
         block = f"Table `{table.id}` ({table.row_count} rows):\n" + "\n".join(col_lines)

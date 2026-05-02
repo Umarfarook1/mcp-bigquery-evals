@@ -1,5 +1,5 @@
 # Golden NL→SQL pairs targeting the FakeBigQueryClient fixture (fake_warehouse.yaml).
-# Used by unit tests for the eval harness — lets us develop the runner without GCP.
+# Used by unit tests for the eval harness - lets us develop the runner without GCP.
 # Real production pairs against bigquery-public-data live in src/mcp_bigquery_evals/evals/golden.yaml
 golden_pairs:
   - id: 1

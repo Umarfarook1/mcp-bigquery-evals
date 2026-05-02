@@ -1,4 +1,4 @@
-"""RealBigQueryClient — wraps google-cloud-bigquery.
+"""RealBigQueryClient - wraps google-cloud-bigquery.
 
 Auth precedence:
 1. GOOGLE_APPLICATION_CREDENTIALS env var → service-account JSON
@@ -62,7 +62,7 @@ class RealBigQueryClient:
 
         result: list[Dataset] = []
         for ds_item in items:
-            # TODO(perf): N+1 — each get_dataset is a serial round trip
+            # TODO(perf): N+1 - each get_dataset is a serial round trip
             ds = self._client.get_dataset(ds_item.dataset_id)
             result.append(
                 Dataset(
@@ -85,7 +85,7 @@ class RealBigQueryClient:
             raise translate_bq_exception(exc) from exc
         result: list[Table] = []
         for t_item in items:
-            # TODO(perf): N+1 — each get_table is a serial round trip; consider concurrent fetch.
+            # TODO(perf): N+1 - each get_table is a serial round trip; consider concurrent fetch.
             t = self._client.get_table(f"{dataset_id}.{t_item.table_id}")
             result.append(
                 Table(

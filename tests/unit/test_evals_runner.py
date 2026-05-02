@@ -1,4 +1,4 @@
-"""Unit tests for the eval runner — uses FakeBigQueryClient and a mock model callback."""
+"""Unit tests for the eval runner - uses FakeBigQueryClient and a mock model callback."""
 
 from __future__ import annotations
 
@@ -180,7 +180,7 @@ def test_runner_partial_accuracy_arithmetic(tmp_path) -> None:
 
     def _alternating(prompt: dict[str, str], gold_sql: str) -> str:
         # Pass on q2, q4 (even ids). Use q-id parsing.
-        # Actually: just always return gold for half of calls — track via counter.
+        # Actually: just always return gold for half of calls - track via counter.
         _alternating.count += 1
         return gold_sql if _alternating.count % 2 == 0 else "SELECT 999 AS wrong"
 
@@ -216,14 +216,14 @@ def test_runner_propagates_build_prompt_failure(tmp_path) -> None:
     )
 
     client = FakeBigQueryClient.from_yaml(FIXTURE)
-    # build_prompt for nonexistent dataset returns "" (no tables found) — doesn't raise.
+    # build_prompt for nonexistent dataset returns "" (no tables found) - doesn't raise.
     # So this test verifies the SUCCESS path: empty schema + gold SQL that doesn't reference
     # any table works. Since SELECT 1 doesn't need a schema, it passes with perfect model.
-    # The real propagation test would require a Protocol method that raises — for
+    # The real propagation test would require a Protocol method that raises - for
     # FakeBigQueryClient, build_prompt against an unknown dataset gives empty schema, not
     # an exception.
     report = run_evals(client=client, golden_path=fixture, model_fn=_perfect_model)
-    # The test passes either way — the contract is verified by code inspection.
+    # The test passes either way - the contract is verified by code inspection.
     # If FakeBigQueryClient ever changes to raise on unknown dataset, the propagation will work.
     assert report.total == 1
 

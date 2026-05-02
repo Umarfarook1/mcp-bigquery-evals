@@ -1,4 +1,4 @@
-# I built a BigQuery MCP server with built-in evals — here's what I learned
+# I built a BigQuery MCP server with built-in evals - here's what I learned
 
 ## Outline
 
@@ -6,7 +6,7 @@
 "Most AI agents that touch warehouses fail in three ways: cost, correctness, and unfounded confidence. Here's how I tried to fix all three in a weekend project."
 
 ### What I built
-- `mcp-bigquery-evals` — an MCP server for Claude Desktop / Cursor / Claude Code
+- `mcp-bigquery-evals` - an MCP server for Claude Desktop / Cursor / Claude Code
 - 7 read-only tools, mandatory dry-run cost caps, in-the-box result-set-equivalence eval harness with a live accuracy badge
 - Live in Claude Desktop in 5 minutes
 
@@ -22,16 +22,16 @@
    - "The agent is good now" is a vibe; accuracy on a fixed golden set is a number
    - Result-set equivalence > LLM-as-judge (link to Hamel Husain's writing on this)
    - Golden set against `bigquery-public-data` so anyone can reproduce
-   - The badge in the README updates on every main merge — agent quality is publicly visible
+   - The badge in the README updates on every main merge - agent quality is publicly visible
    - The hardest part was the comparator, not the runner: NaN, Decimal, ARRAY/STRUCT, bool-vs-int. Show 1-2 specific edge cases that bit me.
 
 3. **Why I dropped `explain_query`**
-   - Tease only — point to the next post
+   - Tease only - point to the next post
 
 ### What surprised me
 - How much faster the FakeBigQueryClient (sqlite-backed) made development. Wrote and tested the entire MCP server before touching real BQ.
 - How many edge cases the comparator needed. The naive version was wrong in five ways.
-- How much the cost cap caught — even my own queries during testing, a few times.
+- How much the cost cap caught - even my own queries during testing, a few times.
 - The eval methodology debate is more interesting than the implementation. I had a lot to learn from reading Hamel/swyx/Eugene Yan.
 
 ### What's next

@@ -37,6 +37,6 @@ class BigQueryClient(Protocol):
     def close(self) -> None:
         """Release any held resources (network connections, sqlite handles, etc.).
 
-        Implementations must make this idempotent — calling close() twice is a no-op.
+        Implementations must make this idempotent - calling close() twice is a no-op.
         """
         ...

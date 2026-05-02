@@ -177,7 +177,7 @@ def _evaluate_one(
     except (KeyboardInterrupt, SystemExit):
         raise
     except Exception as e:
-        # Anything else (model_fn raises, runner bug, etc.) — record as runner_error
+        # Anything else (model_fn raises, runner bug, etc.) - record as runner_error
         error = f"runner_error: {type(e).__name__}: {e}"
         passed = False
 

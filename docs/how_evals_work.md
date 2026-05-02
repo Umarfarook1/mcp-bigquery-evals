@@ -65,9 +65,9 @@ mcp-bigquery-evals evals run --model claude-haiku-4-5
 ```
 
 Optional flags:
-- `--golden PATH` — use a different golden file (default: `src/mcp_bigquery_evals/evals/golden.yaml`)
-- `--limit N` — run only the first N pairs (useful for fast iteration)
-- `--report PATH` — where to write the JSON report (default: `evals/last_report.json`)
+- `--golden PATH` - use a different golden file (default: `src/mcp_bigquery_evals/evals/golden.yaml`)
+- `--limit N` - run only the first N pairs (useful for fast iteration)
+- `--report PATH` - where to write the JSON report (default: `evals/last_report.json`)
 
 The runner also writes a `badge.json` next to the report (consumed by shields.io).
 
@@ -106,9 +106,9 @@ Five pairs at Haiku is ~$0.0005 per iteration. Iterate fast.
 
 ## How errors are reported
 
-The JSON report includes `gold_errors` — the count of pairs whose `gold_sql` itself failed to execute. These are golden-file bugs (broken SQL, missing tables, permission issues), not model errors. They're surfaced separately so a single-digit `gold_errors` value next to a 90% accuracy doesn't get conflated with a model regression.
+The JSON report includes `gold_errors` - the count of pairs whose `gold_sql` itself failed to execute. These are golden-file bugs (broken SQL, missing tables, permission issues), not model errors. They're surfaced separately so a single-digit `gold_errors` value next to a 90% accuracy doesn't get conflated with a model regression.
 
 Per-pair errors carry stable prefixes:
-- `predicted execution failed:` — the model's SQL ran into an error (this is a fail for accuracy)
-- `gold execution failed:` — your golden_sql is broken (does NOT count as a model fail; counts toward `gold_errors`)
-- `runner_error:` — a bug in the runner itself (model_fn raised, etc.); investigate the implementation
+- `predicted execution failed:` - the model's SQL ran into an error (this is a fail for accuracy)
+- `gold execution failed:` - your golden_sql is broken (does NOT count as a model fail; counts toward `gold_errors`)
+- `runner_error:` - a bug in the runner itself (model_fn raised, etc.); investigate the implementation

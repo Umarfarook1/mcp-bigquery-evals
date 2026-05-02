@@ -24,7 +24,7 @@ class Table:
 
 @dataclass(frozen=True, slots=True)
 class TableSchema:
-    """Returned by describe_table — table metadata + column list."""
+    """Returned by describe_table - table metadata + column list."""
 
     table: Table
     columns: list[Column]

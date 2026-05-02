@@ -6,7 +6,7 @@
 "I had `explain_query` in my MCP tool list for two days before I realized it was a circular design smell."
 
 ### The setup
-- Building a BigQuery MCP server. Initial tool list included `explain_query(sql) -> str` — call Claude, ask it to summarize what the SQL does in plain English
+- Building a BigQuery MCP server. Initial tool list included `explain_query(sql) -> str` - call Claude, ask it to summarize what the SQL does in plain English
 - Idea: let the agent verify its own SQL intent before running it. Sounds like good UX.
 
 ### The realization
@@ -38,8 +38,8 @@ Every MCP server should ask: "would my consumer (an LLM) want me to do this work
 Default to the latter. The exceptions are real but narrow.
 
 ### Counter-argument I considered
-"Caching the explanation could justify the LLM call." — true if the same SQL is explained repeatedly, but agents typically generate one-off SQL, so the cache hit rate is low.
+"Caching the explanation could justify the LLM call." - true if the same SQL is explained repeatedly, but agents typically generate one-off SQL, so the cache hit rate is low.
 
-"What if the explanation needs different framing for different audiences?" — the agent KNOWS its audience; the server doesn't. Agent is the right place.
+"What if the explanation needs different framing for different audiences?" - the agent KNOWS its audience; the server doesn't. Agent is the right place.
 
 ### Length target: 800–1000 words

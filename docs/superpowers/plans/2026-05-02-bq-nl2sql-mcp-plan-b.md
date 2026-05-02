@@ -1,8 +1,8 @@
-# mcp-bigquery-evals — Plan B (RealBigQueryClient + Evals + Release) Implementation Plan
+# mcp-bigquery-evals - Plan B (RealBigQueryClient + Evals + Release) Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Take the working stdio MCP server from Plan A to a publicly-shippable v1.0 — real BigQuery client, eval harness with live accuracy badge, CI, public README, PyPI release, `awesome-mcp-servers` listing, two blog posts.
+**Goal:** Take the working stdio MCP server from Plan A to a publicly-shippable v1.0 - real BigQuery client, eval harness with live accuracy badge, CI, public README, PyPI release, `awesome-mcp-servers` listing, two blog posts.
 
 **Architecture:** Build the real `BigQueryClient` Protocol implementation against `google-cloud-bigquery`, applying the four carry-over refinements identified in the Plan A final review (close() in Protocol, lazy imports, structured error translation, single dry-run). Build the eval harness as a CLI subcommand that uses the Anthropic SDK to generate SQL from natural language, executes both the gold and predicted SQL via the BigQueryClient, and compares result sets using Spider/BIRD-style multiset equality. Then wire CI, write the real README, publish to PyPI.
 
@@ -29,7 +29,7 @@ mcp-bigquery-evals/
 │   │   ├── protocol.py                             # T1 (add close())
 │   │   ├── fake.py                                 # T1 (close already exists, no-op alignment)
 │   │   ├── real.py                                 # T3, T4, T5 (new)
-│   │   └── errors.py                               # T6 (new — error translation helpers)
+│   │   └── errors.py                               # T6 (new - error translation helpers)
 │   ├── server.py                                   # T2 (lazy imports), T7 (single dry-run)
 │   ├── tools/run_query.py                          # T7 (single dry-run refactor)
 │   └── evals/
@@ -70,7 +70,7 @@ mcp-bigquery-evals/
 
 The order below front-loads the carry-overs (T1-T2) before adding new code, then builds the real client (T3-T8), then builds the eval harness against the fake (T9-T14) so it's testable without GCP, then wires it to real BQ and Anthropic (T15-T16), then ships (T17-T26).
 
-You can stop after T14 and have a working evals harness against the fake — useful for testing the comparator and runner. Resume T15+ when GCP is set up.
+You can stop after T14 and have a working evals harness against the fake - useful for testing the comparator and runner. Resume T15+ when GCP is set up.
 
 ---
 
@@ -106,7 +106,7 @@ dev = [
 ]
 ```
 
-(Drop the `bq = [...]` extra — `google-cloud-bigquery` is now a runtime dep since the eval harness needs it; the lazy-import refactor in T2 means the import cost is paid only when the real path is taken at server startup, not when the fake is used.)
+(Drop the `bq = [...]` extra - `google-cloud-bigquery` is now a runtime dep since the eval harness needs it; the lazy-import refactor in T2 means the import cost is paid only when the real path is taken at server startup, not when the fake is used.)
 
 - [ ] **Step 2: Write `.env.example`**
 
@@ -170,7 +170,7 @@ Expected: `error: "BigQueryClient" has no attribute "close"`.
 
 - [ ] **Step 3: Add `close()` to Protocol**
 
-Update `src/mcp_bigquery_evals/bq/protocol.py` — add a method to the Protocol body:
+Update `src/mcp_bigquery_evals/bq/protocol.py` - add a method to the Protocol body:
 ```python
 @runtime_checkable
 class BigQueryClient(Protocol):
@@ -195,7 +195,7 @@ class BigQueryClient(Protocol):
     def close(self) -> None:
         """Release any held resources (network connections, sqlite handles, etc.).
 
-        Implementations must make this idempotent — calling close() twice is a no-op.
+        Implementations must make this idempotent - calling close() twice is a no-op.
         """
         ...
 ```
@@ -241,7 +241,7 @@ git commit -m "bq: add close() to BigQueryClient Protocol; make FakeBigQueryClie
 
 - [ ] **Step 1: Verify the test still asserts what we want**
 
-`tests/unit/test_tools/test_server.py` exercises `build_server()` end-to-end via the env var. The test sets `MCP_BIGQUERY_FAKE_FIXTURE` and calls `build_server()`. After this refactor, that path still works — fake is just imported lazily inside `build_client()` instead of at module top-level.
+`tests/unit/test_tools/test_server.py` exercises `build_server()` end-to-end via the env var. The test sets `MCP_BIGQUERY_FAKE_FIXTURE` and calls `build_server()`. After this refactor, that path still works - fake is just imported lazily inside `build_client()` instead of at module top-level.
 
 - [ ] **Step 2: Refactor `server.py`**
 
@@ -276,7 +276,7 @@ def build_client() -> BigQueryClient:
     return RealBigQueryClient(project=project)
 ```
 
-(The `RealBigQueryClient` import will fail until T3 lands — that's fine; the test in T2 only exercises the fake path. The import is inside the conditional, so it only resolves at runtime when needed.)
+(The `RealBigQueryClient` import will fail until T3 lands - that's fine; the test in T2 only exercises the fake path. The import is inside the conditional, so it only resolves at runtime when needed.)
 
 - [ ] **Step 3: Verify**
 
@@ -298,7 +298,7 @@ git commit -m "server: lazy-import BQ client implementations so [bq] extra is me
 
 ---
 
-### Task 3: RealBigQueryClient — list_datasets + list_tables (with mock-based tests)
+### Task 3: RealBigQueryClient - list_datasets + list_tables (with mock-based tests)
 
 **Files:**
 - Create: `src/mcp_bigquery_evals/bq/real.py`
@@ -417,7 +417,7 @@ Expected: ImportError on `mcp_bigquery_evals.bq.real`.
 
 `src/mcp_bigquery_evals/bq/real.py`:
 ```python
-"""RealBigQueryClient — wraps google-cloud-bigquery.
+"""RealBigQueryClient - wraps google-cloud-bigquery.
 
 Auth precedence:
 1. GOOGLE_APPLICATION_CREDENTIALS env var → service-account JSON
@@ -506,7 +506,7 @@ class RealBigQueryClient:
             self._client = None  # type: ignore[assignment]
 ```
 
-(The `Any` for `_client` is intentional — typing it as `bigquery.Client` would force test mocks to satisfy the full BQ client interface. We trust the runtime duck-typing here since the test fixtures already validate behavior.)
+(The `Any` for `_client` is intentional - typing it as `bigquery.Client` would force test mocks to satisfy the full BQ client interface. We trust the runtime duck-typing here since the test fixtures already validate behavior.)
 
 - [ ] **Step 4: Run tests to verify they pass**
 
@@ -527,7 +527,7 @@ git commit -m "bq(real): add RealBigQueryClient with list_datasets and list_tabl
 
 ---
 
-### Task 4: RealBigQueryClient — get_table + sample_rows
+### Task 4: RealBigQueryClient - get_table + sample_rows
 
 **Files:**
 - Modify: `src/mcp_bigquery_evals/bq/real.py`
@@ -625,7 +625,7 @@ git commit -m "bq(real): implement get_table and sample_rows"
 
 ---
 
-### Task 5: RealBigQueryClient — dry_run + execute (raw, no error translation yet)
+### Task 5: RealBigQueryClient - dry_run + execute (raw, no error translation yet)
 
 **Files:**
 - Modify: `src/mcp_bigquery_evals/bq/real.py`
@@ -1081,9 +1081,9 @@ def test_run_query_calls_dry_run_exactly_once(client: FakeBigQueryClient):
 - [ ] **Step 2: Run, verify it fails**
 
 Run: `pytest tests/unit/test_dry_run_dedup.py -v`
-Expected: assertion error — `spy.call_count == 2` (one from run_query, one from execute).
+Expected: assertion error - `spy.call_count == 2` (one from run_query, one from execute).
 
-- [ ] **Step 3: Refactor — change `execute()` signature**
+- [ ] **Step 3: Refactor - change `execute()` signature**
 
 Update `src/mcp_bigquery_evals/bq/protocol.py`:
 ```python
@@ -1319,7 +1319,7 @@ git commit -m "tests: add real BigQuery smoke (gated by @pytest.mark.bq)"
 
 ---
 
-### Task 9: Eval harness — golden_fake.yaml fixture
+### Task 9: Eval harness - golden_fake.yaml fixture
 
 **Files:**
 - Create: `src/mcp_bigquery_evals/evals/__init__.py`
@@ -1338,7 +1338,7 @@ git commit -m "tests: add real BigQuery smoke (gated by @pytest.mark.bq)"
 `tests/fixtures/golden_fake.yaml`:
 ```yaml
 # Golden NL→SQL pairs targeting the FakeBigQueryClient fixture (fake_warehouse.yaml).
-# Used by unit tests for the eval harness — lets us develop the runner without GCP.
+# Used by unit tests for the eval harness - lets us develop the runner without GCP.
 # Real production pairs against bigquery-public-data live in src/mcp_bigquery_evals/evals/golden.yaml
 golden_pairs:
   - id: 1
@@ -1390,7 +1390,7 @@ git commit -m "evals: add golden_fake.yaml fixture (5 NL→SQL pairs against fak
 
 ---
 
-### Task 10: Eval — result-set comparison helper
+### Task 10: Eval - result-set comparison helper
 
 **Files:**
 - Create: `src/mcp_bigquery_evals/evals/compare.py`
@@ -1586,13 +1586,13 @@ git commit -m "evals: add result-set comparison (multiset semantics, float toler
 
 ---
 
-### Task 11: Eval — model prompt template
+### Task 11: Eval - model prompt template
 
 **Files:**
 - Create: `src/mcp_bigquery_evals/evals/prompt.py`
 - Create: `tests/unit/test_evals_prompt.py`
 
-The prompt template tells the model what schema is available and asks it to produce SQL. It's deliberately simple — no chain-of-thought prompting, no few-shot examples for v1. The goal is a baseline measurable accuracy number, not a maxed-out one. Future versions can iterate on the prompt and watch the accuracy badge move.
+The prompt template tells the model what schema is available and asks it to produce SQL. It's deliberately simple - no chain-of-thought prompting, no few-shot examples for v1. The goal is a baseline measurable accuracy number, not a maxed-out one. Future versions can iterate on the prompt and watch the accuracy badge move.
 
 - [ ] **Step 1: Write failing tests**
 
@@ -1680,7 +1680,7 @@ def build_schema_context(client: BigQueryClient, dataset_id: str) -> str:
     for table in client.list_tables(dataset_id):
         schema = client.get_table(table.id)
         col_lines = [
-            f"  - {c.name} ({c.type}){f' — {c.description}' if c.description else ''}"
+            f"  - {c.name} ({c.type}){f' - {c.description}' if c.description else ''}"
             for c in schema.columns
         ]
         block = f"Table `{table.id}` ({table.row_count} rows):\n" + "\n".join(col_lines)
@@ -1723,7 +1723,7 @@ git commit -m "evals: add prompt builder (schema context + system/user message p
 
 ---
 
-### Task 12: Eval — runner orchestrator (with mock model)
+### Task 12: Eval - runner orchestrator (with mock model)
 
 **Files:**
 - Create: `src/mcp_bigquery_evals/evals/runner.py`
@@ -1737,7 +1737,7 @@ For unit tests, we mock the model call so the runner is exercised end-to-end wit
 
 `tests/unit/test_evals_runner.py`:
 ```python
-"""Unit tests for the eval runner — uses FakeBigQueryClient and a mock model callback."""
+"""Unit tests for the eval runner - uses FakeBigQueryClient and a mock model callback."""
 from __future__ import annotations
 
 from pathlib import Path
@@ -2250,7 +2250,7 @@ git commit -m "cli: wire 'evals run' subcommand with Anthropic SDK + report outp
 
 ---
 
-### Task 14: Eval — JSON report + accuracy badge writer
+### Task 14: Eval - JSON report + accuracy badge writer
 
 **Files:**
 - Create: `src/mcp_bigquery_evals/evals/report.py`
@@ -2423,14 +2423,14 @@ This is the production golden set. Targets 3 `bigquery-public-data` datasets: `s
 
 The pairs are hand-written (you wrote them, you can defend them). Each is a real, plausible analyst question with an unambiguous gold answer.
 
-> **Tactical note:** If you want to scale to 50+ pairs, the right pattern is to ask Claude to generate candidates against each dataset's schema, then YOU verify each one runs and the gold result is what you expected. Don't ship pairs you haven't personally verified — the eval harness's credibility depends on the goldens being right.
+> **Tactical note:** If you want to scale to 50+ pairs, the right pattern is to ask Claude to generate candidates against each dataset's schema, then YOU verify each one runs and the gold result is what you expected. Don't ship pairs you haven't personally verified - the eval harness's credibility depends on the goldens being right.
 
 - [ ] **Step 1: Write the golden.yaml**
 
 `src/mcp_bigquery_evals/evals/golden.yaml`:
 ```yaml
 # Production golden NL→SQL pairs for the eval harness.
-# Targets bigquery-public-data — anyone with a GCP project can reproduce.
+# Targets bigquery-public-data - anyone with a GCP project can reproduce.
 # Each pair must be MANUALLY VERIFIED by running gold_sql against real BQ
 # and confirming the result matches the question's intent.
 golden_pairs:
@@ -2600,7 +2600,7 @@ export BIGQUERY_PROJECT=your-personal-project
 
 If a gold_sql produces a result that doesn't match what the NL question intends (e.g., wrong year extract), fix the SQL or the NL.
 
-> **Engineer note:** If you can't verify against real BQ right now (no GCP yet), commit the file as-is with a `verified: false` flag in the YAML for each pair, and add a TODO to verify before T16 (which actually runs against real BQ). I'd recommend deferring this entire task until GCP is set up — the goldens are useless if not verified.
+> **Engineer note:** If you can't verify against real BQ right now (no GCP yet), commit the file as-is with a `verified: false` flag in the YAML for each pair, and add a TODO to verify before T16 (which actually runs against real BQ). I'd recommend deferring this entire task until GCP is set up - the goldens are useless if not verified.
 
 - [ ] **Step 3: Commit (after verification)**
 
@@ -2616,7 +2616,7 @@ git commit -m "evals: add 15 verified golden pairs against bigquery-public-data"
 **Files:**
 - Create: `tests/integration/test_evals_real_smoke.py`
 
-Marked with `@pytest.mark.live`. Runs only with `pytest -m live` AND requires both `BIGQUERY_PROJECT` and `ANTHROPIC_API_KEY` set. Costs a few cents in API calls per run — kept small (3 pairs).
+Marked with `@pytest.mark.live`. Runs only with `pytest -m live` AND requires both `BIGQUERY_PROJECT` and `ANTHROPIC_API_KEY` set. Costs a few cents in API calls per run - kept small (3 pairs).
 
 - [ ] **Step 1: Write the smoke test**
 
@@ -2661,7 +2661,7 @@ def test_real_eval_smoke_3_pairs(client: RealBigQueryClient):
     report = run_evals(client=client, golden_path=GOLDEN, model_fn=model_fn, limit=3)
 
     assert report.total == 3
-    # Don't assert a specific accuracy — that's what we're measuring.
+    # Don't assert a specific accuracy - that's what we're measuring.
     # Just assert the run completed without crashing and produced a number.
     assert 0.0 <= report.accuracy <= 1.0
     assert all(r.predicted_sql is not None for r in report.per_pair)
@@ -2719,7 +2719,7 @@ A [Model Context Protocol](https://modelcontextprotocol.io/) server that lets Cl
 
 - **7 read-only tools** for warehouse discovery + querying
 - **Mandatory dry-run cost cap** on every `run_query` (default 100 MB scanned, ≈ $0.0005)
-- **Built-in eval harness** with result-set-equivalence methodology — every release ships an accuracy number, not a vibe
+- **Built-in eval harness** with result-set-equivalence methodology - every release ships an accuracy number, not a vibe
 
 Two clients ship in the box: `RealBigQueryClient` (production) and `FakeBigQueryClient` (in-memory, sqlite-backed; for dev and CI without GCP credentials).
 
@@ -2812,7 +2812,7 @@ There are a few BigQuery MCP servers floating around. This one is different in t
 
 1. **Cost guardrails** are mandatory and surfaced as structured errors agents can act on. Most don't have them.
 2. **Result-set-equivalence evals** ship in the box, with a live accuracy badge in this README. Agent quality is measurable, not assumed.
-3. **Read-only by design** — no INSERT/UPDATE/DELETE. The blast radius of an LLM mistake is bounded to scanning bytes, not mutating data.
+3. **Read-only by design** - no INSERT/UPDATE/DELETE. The blast radius of an LLM mistake is bounded to scanning bytes, not mutating data.
 
 ## Development
 
@@ -2828,7 +2828,7 @@ pytest -m live            # end-to-end with real model + real BQ
 
 ## License
 
-MIT — see `LICENSE`.
+MIT - see `LICENSE`.
 
 ## Contributing
 
@@ -3013,7 +3013,7 @@ No `INSERT`, `UPDATE`, `DELETE`, `CREATE`, `DROP`. The blast radius of an LLM mi
 
 ### 4. No internal LLM calls in the server runtime
 
-The MCP server is deterministic. It does not call Claude, GPT, or any other LLM internally. The consumer (Claude Desktop) IS the LLM — it can summarize SQL, explain results, and reason about errors itself. Putting an LLM inside an MCP server whose only consumer is an LLM is a design smell.
+The MCP server is deterministic. It does not call Claude, GPT, or any other LLM internally. The consumer (Claude Desktop) IS the LLM - it can summarize SQL, explain results, and reason about errors itself. Putting an LLM inside an MCP server whose only consumer is an LLM is a design smell.
 
 The eval harness is a separate process (`mcp-bigquery-evals evals run`) and DOES call Anthropic's API to generate predicted SQL. It does NOT touch the MCP server runtime.
 
@@ -3118,11 +3118,11 @@ golden_pairs:
 ```
 
 Fields:
-- `id` (int) — unique identifier
-- `dataset` (string) — fully-qualified dataset (`project.dataset`); used to build the schema context
-- `nl` (string) — natural-language question, written as a real analyst would ask it
-- `gold_sql` (string) — the canonical correct SQL; you must verify this returns the right answer
-- `tags` (list[string]) — optional; useful for slicing accuracy by query category
+- `id` (int) - unique identifier
+- `dataset` (string) - fully-qualified dataset (`project.dataset`); used to build the schema context
+- `nl` (string) - natural-language question, written as a real analyst would ask it
+- `gold_sql` (string) - the canonical correct SQL; you must verify this returns the right answer
+- `tags` (list[string]) - optional; useful for slicing accuracy by query category
 
 ## Running the harness
 
@@ -3131,9 +3131,9 @@ mcp-bigquery-evals evals run --model claude-haiku-4-5
 ```
 
 Optional flags:
-- `--golden PATH` — use a different golden file (default: `src/mcp_bigquery_evals/evals/golden.yaml`)
-- `--limit N` — run only the first N pairs (useful for fast iteration)
-- `--report PATH` — where to write the JSON report (default: `evals/last_report.json`)
+- `--golden PATH` - use a different golden file (default: `src/mcp_bigquery_evals/evals/golden.yaml`)
+- `--limit N` - run only the first N pairs (useful for fast iteration)
+- `--report PATH` - where to write the JSON report (default: `evals/last_report.json`)
 
 The runner also writes a `badge.json` next to the report (consumed by shields.io).
 
@@ -3178,7 +3178,7 @@ git commit -m "docs: add eval harness walkthrough (methodology, format, how to a
 
 ---
 
-### Task 21: CI — `ci.yml` (lint, types, unit tests)
+### Task 21: CI - `ci.yml` (lint, types, unit tests)
 
 **Files:**
 - Create: `.github/workflows/ci.yml`
@@ -3222,7 +3222,7 @@ jobs:
       - name: Mypy strict
         run: mypy src
 
-      - name: Pytest (unit tests only — bq and live tests are gated)
+      - name: Pytest (unit tests only - bq and live tests are gated)
         run: pytest -v
 ```
 
@@ -3235,14 +3235,14 @@ git commit -m "ci: add ruff + mypy + pytest workflow on push/PR (Python 3.11 + 3
 
 ---
 
-### Task 22: CI — `evals.yml` (run evals, update badge)
+### Task 22: CI - `evals.yml` (run evals, update badge)
 
 **Files:**
 - Create: `.github/workflows/evals.yml`
 
 This workflow runs on every `main` push, executes the eval harness against real BQ + real Anthropic, and commits the updated `badge.json` back to the repo. Requires GitHub repo secrets:
-- `GCP_SA_KEY` — service account JSON (paste the entire JSON)
-- `BIGQUERY_PROJECT` — your project id
+- `GCP_SA_KEY` - service account JSON (paste the entire JSON)
+- `BIGQUERY_PROJECT` - your project id
 - `ANTHROPIC_API_KEY`
 
 - [ ] **Step 1: Write the workflow**
@@ -3306,7 +3306,7 @@ jobs:
 
 - [ ] **Step 2: Add `evals/` to `.gitignore` exclusions**
 
-Make sure the existing `.gitignore` does NOT exclude `evals/badge.json` — that file MUST be committed by CI for shields.io to fetch it. The existing `.gitignore` from Plan A doesn't ignore `evals/`, so this should be fine. Just verify.
+Make sure the existing `.gitignore` does NOT exclude `evals/badge.json` - that file MUST be committed by CI for shields.io to fetch it. The existing `.gitignore` from Plan A doesn't ignore `evals/`, so this should be fine. Just verify.
 
 - [ ] **Step 3: Commit**
 
@@ -3315,7 +3315,7 @@ git add .github/workflows/evals.yml
 git commit -m "ci: add evals workflow that runs harness and commits updated badge"
 ```
 
-> **Engineer note:** The badge URL in the README points to `https://raw.githubusercontent.com/Umarfarook1/mcp-bigquery-evals/main/evals/badge.json`. After the first eval run lands the file, shields.io will start serving the badge. Until then, the badge in the README will show "invalid" — that's expected and resolves on the first eval CI run.
+> **Engineer note:** The badge URL in the README points to `https://raw.githubusercontent.com/Umarfarook1/mcp-bigquery-evals/main/evals/badge.json`. After the first eval run lands the file, shields.io will start serving the badge. Until then, the badge in the README will show "invalid" - that's expected and resolves on the first eval CI run.
 
 ---
 
@@ -3354,7 +3354,7 @@ Repository = "https://github.com/Umarfarook1/mcp-bigquery-evals"
 Issues = "https://github.com/Umarfarook1/mcp-bigquery-evals/issues"
 ```
 
-(Keep all other sections — dependencies, build-system, tool configs — unchanged.)
+(Keep all other sections - dependencies, build-system, tool configs - unchanged.)
 
 - [ ] **Step 2: Build and verify the artifact**
 
@@ -3488,7 +3488,7 @@ Outlines, not full posts. You'll flesh them out and publish on your blog.
 
 `docs/blog/2026-05-XX-bigquery-mcp-evals.md`:
 ```markdown
-# I built a BigQuery MCP server with built-in evals — here's what I learned
+# I built a BigQuery MCP server with built-in evals - here's what I learned
 
 ## Outline
 
@@ -3517,7 +3517,7 @@ Outlines, not full posts. You'll flesh them out and publish on your blog.
 
 ### What surprised me
 - How much faster the FakeBigQueryClient (sqlite-backed) made development
-- How much the cost cap caught — even my own queries during testing
+- How much the cost cap caught - even my own queries during testing
 - The eval methodology debate is more interesting than the implementation
 
 ### What's next
@@ -3544,7 +3544,7 @@ Outlines, not full posts. You'll flesh them out and publish on your blog.
 
 ### The setup
 - I was building a BigQuery MCP server for Claude Desktop
-- Initial tool list included `explain_query(sql) -> str` — call Claude, ask it to summarize what the SQL does in plain English
+- Initial tool list included `explain_query(sql) -> str` - call Claude, ask it to summarize what the SQL does in plain English
 - Idea: let the agent verify its own SQL intent before running it
 
 ### The realization
