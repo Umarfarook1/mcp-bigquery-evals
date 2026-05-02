@@ -155,3 +155,64 @@ def test_method_calls_after_close_raise_clear_error(real_client: RealBigQueryCli
 def test_close_idempotent(real_client: RealBigQueryClient) -> None:
     real_client.close()
     real_client.close()  # must not raise
+
+
+def test_get_table_returns_schema(real_client: RealBigQueryClient) -> None:
+    schema = real_client.get_table("analytics.users")
+    assert schema.table.id == "analytics.users"
+    assert schema.table.row_count == 100
+    assert schema.columns[0].name == "user_id"
+    assert schema.columns[0].type == "STRING"
+    assert schema.columns[0].description == "Primary key."
+
+
+def test_get_table_handles_null_metadata(mock_bq: MagicMock) -> None:
+    """Tables that haven't been materialized return None for num_rows/num_bytes."""
+
+    def _get_table_with_nulls(table_ref: object) -> MagicMock:
+        t = MagicMock()
+        t.table_id = "live"
+        t.num_rows = None
+        t.num_bytes = None
+        t.schema = []
+        return t
+
+    mock_bq.get_table.side_effect = _get_table_with_nulls
+
+    client = RealBigQueryClient(project="myproj", _client=mock_bq)
+    schema = client.get_table("analytics.live")
+    assert schema.table.row_count == 0
+    assert schema.table.size_bytes == 0
+    assert schema.columns == []
+
+
+def test_sample_rows_returns_dicts(mock_bq: MagicMock) -> None:
+    """sample_rows uses list_rows() which returns RowIterator yielding Row objects."""
+    row_a = MagicMock()
+    row_a.items.return_value = [("user_id", "u1"), ("email", "alice@example.com")]
+    row_b = MagicMock()
+    row_b.items.return_value = [("user_id", "u2"), ("email", "bob@example.com")]
+    row_c = MagicMock()
+    row_c.items.return_value = [("user_id", "u3"), ("email", "carol@example.com")]
+    mock_bq.list_rows.return_value = [row_a, row_b, row_c]
+
+    client = RealBigQueryClient(project="myproj", _client=mock_bq)
+    rows = client.sample_rows("analytics.users", n=3)
+    assert len(rows) == 3
+    assert rows[0] == {"user_id": "u1", "email": "alice@example.com"}
+    mock_bq.list_rows.assert_called_once_with("analytics.users", max_results=3)
+
+
+def test_sample_rows_clamps_negative_n(mock_bq: MagicMock) -> None:
+    mock_bq.list_rows.return_value = []
+    client = RealBigQueryClient(project="myproj", _client=mock_bq)
+    rows = client.sample_rows("analytics.users", n=-5)
+    assert rows == []
+    mock_bq.list_rows.assert_called_once_with("analytics.users", max_results=0)
+
+
+def test_sample_rows_zero_n(mock_bq: MagicMock) -> None:
+    mock_bq.list_rows.return_value = []
+    client = RealBigQueryClient(project="myproj", _client=mock_bq)
+    rows = client.sample_rows("analytics.users", n=0)
+    assert rows == []

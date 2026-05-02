@@ -18,6 +18,7 @@ from google.api_core.exceptions import NotFound, PermissionDenied
 from google.cloud import bigquery
 
 from mcp_bigquery_evals.bq.types import (
+    Column,
     Dataset,
     DryRunResult,
     QueryResult,
@@ -78,11 +79,29 @@ class RealBigQueryClient:
 
     def get_table(self, table_id: str) -> TableSchema:
         self._assert_open()
-        raise NotImplementedError  # Task 4
+        t = self._client.get_table(table_id)
+        columns = [
+            Column(
+                name=field.name,
+                type=field.field_type,
+                description=getattr(field, "description", None),
+            )
+            for field in (t.schema or [])
+        ]
+        return TableSchema(
+            table=Table(
+                id=table_id,
+                row_count=int(getattr(t, "num_rows", 0) or 0),
+                size_bytes=int(getattr(t, "num_bytes", 0) or 0),
+            ),
+            columns=columns,
+        )
 
     def sample_rows(self, table_id: str, n: int) -> list[dict[str, object]]:
         self._assert_open()
-        raise NotImplementedError  # Task 4
+        n = max(0, n)
+        rows_iter = self._client.list_rows(table_id, max_results=n)
+        return [dict(row.items()) for row in rows_iter]
 
     def dry_run(self, sql: str) -> DryRunResult:
         self._assert_open()
