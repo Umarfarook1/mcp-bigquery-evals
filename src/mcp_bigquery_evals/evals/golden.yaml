@@ -1,0 +1,178 @@
+# Production golden NL→SQL pairs for the eval harness.
+# Targets bigquery-public-data — anyone with a GCP project can reproduce.
+#
+# IMPORTANT: each pair MUST be manually verified by running gold_sql against real
+# BigQuery and confirming the result matches the question's intent.
+# Currently every pair has `verified: false` — verify before relying on these
+# numbers in any published accuracy claim.
+
+golden_pairs:
+  # ---- bigquery-public-data.samples (small, free, no quota concerns) ----
+
+  - id: 1
+    dataset: bigquery-public-data.samples
+    nl: "How many unique words appear in the Shakespeare dataset?"
+    gold_sql: |
+      SELECT COUNT(DISTINCT word) AS n
+      FROM `bigquery-public-data.samples.shakespeare`
+    tags: [count, distinct]
+    verified: false
+
+  - id: 2
+    dataset: bigquery-public-data.samples
+    nl: "What are the top 5 most-frequent words in the Shakespeare dataset, excluding words shorter than 4 characters?"
+    gold_sql: |
+      SELECT word, SUM(word_count) AS total
+      FROM `bigquery-public-data.samples.shakespeare`
+      WHERE LENGTH(word) >= 4
+      GROUP BY word
+      ORDER BY total DESC
+      LIMIT 5
+    tags: [aggregate, filter, group_by, order, limit]
+    verified: false
+
+  - id: 3
+    dataset: bigquery-public-data.samples
+    nl: "How many corpora (distinct works) are in the Shakespeare dataset?"
+    gold_sql: |
+      SELECT COUNT(DISTINCT corpus) AS n
+      FROM `bigquery-public-data.samples.shakespeare`
+    tags: [count, distinct]
+    verified: false
+
+  - id: 4
+    dataset: bigquery-public-data.samples
+    nl: "What is the average baby weight in pounds for births recorded in the natality dataset?"
+    gold_sql: |
+      SELECT AVG(weight_pounds) AS avg_weight
+      FROM `bigquery-public-data.samples.natality`
+      WHERE weight_pounds IS NOT NULL
+    tags: [aggregate, null_handling]
+    verified: false
+
+  - id: 5
+    dataset: bigquery-public-data.samples
+    nl: "Total natality records by year, ordered chronologically. Limit to first 5 years."
+    gold_sql: |
+      SELECT year, COUNT(*) AS births
+      FROM `bigquery-public-data.samples.natality`
+      GROUP BY year
+      ORDER BY year
+      LIMIT 5
+    tags: [group_by, count, order, limit]
+    verified: false
+
+  # ---- bigquery-public-data.stackoverflow ----
+
+  - id: 6
+    dataset: bigquery-public-data.stackoverflow
+    nl: "How many questions tagged with 'python' were asked in 2023?"
+    gold_sql: |
+      SELECT COUNT(*) AS n
+      FROM `bigquery-public-data.stackoverflow.posts_questions`
+      WHERE EXTRACT(YEAR FROM creation_date) = 2023
+        AND tags LIKE '%python%'
+    tags: [count, filter, year_extract, like]
+    verified: false
+
+  - id: 7
+    dataset: bigquery-public-data.stackoverflow
+    nl: "Top 3 most-viewed Stack Overflow questions tagged 'sql' (by view_count)."
+    gold_sql: |
+      SELECT title, view_count
+      FROM `bigquery-public-data.stackoverflow.posts_questions`
+      WHERE tags LIKE '%sql%'
+      ORDER BY view_count DESC
+      LIMIT 3
+    tags: [select, filter, order, limit]
+    verified: false
+
+  - id: 8
+    dataset: bigquery-public-data.stackoverflow
+    nl: "How many users on Stack Overflow have a reputation greater than 100,000?"
+    gold_sql: |
+      SELECT COUNT(*) AS n
+      FROM `bigquery-public-data.stackoverflow.users`
+      WHERE reputation > 100000
+    tags: [count, filter]
+    verified: false
+
+  - id: 9
+    dataset: bigquery-public-data.stackoverflow
+    nl: "Which year had the most questions asked on Stack Overflow? Return the year."
+    gold_sql: |
+      SELECT EXTRACT(YEAR FROM creation_date) AS year, COUNT(*) AS n
+      FROM `bigquery-public-data.stackoverflow.posts_questions`
+      GROUP BY year
+      ORDER BY n DESC
+      LIMIT 1
+    tags: [group_by, count, year_extract, order, limit]
+    verified: false
+
+  - id: 10
+    dataset: bigquery-public-data.stackoverflow
+    nl: "Average score of accepted answers in the stackoverflow dataset (use posts_answers; accepted answers have parent_id matching a question's accepted_answer_id)."
+    gold_sql: |
+      SELECT AVG(a.score) AS avg_score
+      FROM `bigquery-public-data.stackoverflow.posts_answers` a
+      JOIN `bigquery-public-data.stackoverflow.posts_questions` q
+        ON a.id = q.accepted_answer_id
+    tags: [aggregate, join]
+    verified: false
+
+  # ---- bigquery-public-data.usa_names ----
+
+  - id: 11
+    dataset: bigquery-public-data.usa_names
+    nl: "What are the top 5 most popular baby names of all time in the USA names dataset?"
+    gold_sql: |
+      SELECT name, SUM(number) AS total
+      FROM `bigquery-public-data.usa_names.usa_1910_2013`
+      GROUP BY name
+      ORDER BY total DESC
+      LIMIT 5
+    tags: [group_by, aggregate, order, limit]
+    verified: false
+
+  - id: 12
+    dataset: bigquery-public-data.usa_names
+    nl: "How many distinct baby names were recorded in the USA names dataset?"
+    gold_sql: |
+      SELECT COUNT(DISTINCT name) AS n
+      FROM `bigquery-public-data.usa_names.usa_1910_2013`
+    tags: [count, distinct]
+    verified: false
+
+  - id: 13
+    dataset: bigquery-public-data.usa_names
+    nl: "What is the most popular baby boy name in 2010?"
+    gold_sql: |
+      SELECT name
+      FROM `bigquery-public-data.usa_names.usa_1910_2013`
+      WHERE year = 2010 AND gender = 'M'
+      ORDER BY number DESC
+      LIMIT 1
+    tags: [select, filter, order, limit]
+    verified: false
+
+  - id: 14
+    dataset: bigquery-public-data.usa_names
+    nl: "Total births recorded by gender in the USA names dataset."
+    gold_sql: |
+      SELECT gender, SUM(number) AS total
+      FROM `bigquery-public-data.usa_names.usa_1910_2013`
+      GROUP BY gender
+    tags: [group_by, aggregate]
+    verified: false
+
+  - id: 15
+    dataset: bigquery-public-data.usa_names
+    nl: "Year with the highest total recorded births. Return the year and the total."
+    gold_sql: |
+      SELECT year, SUM(number) AS total
+      FROM `bigquery-public-data.usa_names.usa_1910_2013`
+      GROUP BY year
+      ORDER BY total DESC
+      LIMIT 1
+    tags: [group_by, aggregate, order, limit]
+    verified: false
