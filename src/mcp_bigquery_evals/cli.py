@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import argparse
-import json
 import sys
 from collections.abc import Callable
 from pathlib import Path
@@ -68,7 +67,7 @@ def _cmd_evals_run(args: argparse.Namespace) -> int:
         pass
 
     from mcp_bigquery_evals.evals.anthropic_model import make_anthropic_model
-    from mcp_bigquery_evals.evals.runner import report_to_dict, run_evals
+    from mcp_bigquery_evals.evals.runner import run_evals
     from mcp_bigquery_evals.server import build_client
 
     try:
@@ -111,10 +110,15 @@ def _cmd_evals_run(args: argparse.Namespace) -> int:
         file=sys.stderr,
     )
 
-    # Write JSON report
-    args.report.parent.mkdir(parents=True, exist_ok=True)
-    args.report.write_text(json.dumps(report_to_dict(report), indent=2, default=str))
+    # Write JSON report + shields.io badge
+    from mcp_bigquery_evals.evals.report import write_badge, write_report
+
+    write_report(report, args.report, model_id=args.model)
     print(f"Wrote report to {args.report}", file=sys.stderr)
+
+    badge_path = args.report.parent / "badge.json"
+    write_badge(report, badge_path, model_id=args.model)
+    print(f"Wrote badge to {badge_path}", file=sys.stderr)
 
     # Exit code: 0 on any success, 1 if all pairs failed (signal a problem), 2 already handled above
     return 0 if report.total == 0 or report.passes > 0 else 1
