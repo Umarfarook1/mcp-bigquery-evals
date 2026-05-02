@@ -65,6 +65,16 @@ def test_sample_rows_unknown_table_raises(client: FakeBigQueryClient):
         client.sample_rows("analytics.nonexistent", n=1)
 
 
+def test_sample_rows_negative_n_returns_empty(client: FakeBigQueryClient):
+    rows = client.sample_rows("analytics.users", n=-3)
+    assert rows == []
+
+
+def test_sample_rows_zero_n_returns_empty(client: FakeBigQueryClient):
+    rows = client.sample_rows("analytics.users", n=0)
+    assert rows == []
+
+
 def test_execute_select_count(client: FakeBigQueryClient):
     r = client.execute("SELECT COUNT(*) AS n FROM `analytics.users`")
     assert r.rows == [{"n": 5}]
