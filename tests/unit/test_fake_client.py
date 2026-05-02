@@ -118,9 +118,7 @@ def test_bq_to_sqlite_translates_bare_two_part_for_known_tables(client: FakeBigQ
 
 
 def test_bq_to_sqlite_does_not_touch_alias_dot_columns(client: FakeBigQueryClient):
-    out = client._bq_to_sqlite(
-        "SELECT u.country FROM `analytics.users` u"
-    )
+    out = client._bq_to_sqlite("SELECT u.country FROM `analytics.users` u")
     assert "u.country" in out  # alias ref preserved
     assert "analytics__users" in out
 
@@ -129,6 +127,4 @@ def test_table_referenced_uses_word_boundary():
     from mcp_bigquery_evals.bq.fake import _table_referenced
 
     assert _table_referenced("SELECT * FROM `analytics.users`", "analytics.users")
-    assert not _table_referenced(
-        "SELECT * FROM `analytics.users_extended`", "analytics.users"
-    )
+    assert not _table_referenced("SELECT * FROM `analytics.users_extended`", "analytics.users")

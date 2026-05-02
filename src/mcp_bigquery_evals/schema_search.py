@@ -27,10 +27,6 @@ def search_schema(
             schema = client.get_table(table.id)
             for col in schema.columns:
                 score = fuzz.WRatio(term, col.name)
-                hits.append(
-                    SchemaHit(
-                        table=table.id, column=col.name, similarity=int(score)
-                    )
-                )
+                hits.append(SchemaHit(table=table.id, column=col.name, similarity=int(score)))
     hits.sort(key=lambda h: h["similarity"], reverse=True)
     return hits[:limit]
