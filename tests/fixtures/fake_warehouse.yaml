@@ -1,0 +1,50 @@
+# Fake BigQuery warehouse used by FakeBigQueryClient in unit tests.
+# Two datasets, three tables total. Small but covers list/describe/sample/query paths.
+datasets:
+  - id: analytics
+    location: US
+    description: User and event data for the demo product.
+  - id: ops
+    location: US
+    description: Operational metrics.
+
+tables:
+  - id: analytics.users
+    description: One row per registered user.
+    columns:
+      - { name: user_id, type: STRING, description: Primary key. }
+      - { name: email, type: STRING, description: Login email. }
+      - { name: signup_date, type: DATE, description: Date the user signed up. }
+      - { name: country, type: STRING, description: ISO country code. }
+    rows:
+      - { user_id: u1, email: alice@example.com, signup_date: '2026-01-15', country: US }
+      - { user_id: u2, email: bob@example.com,   signup_date: '2026-02-03', country: US }
+      - { user_id: u3, email: carol@example.com, signup_date: '2026-02-20', country: IN }
+      - { user_id: u4, email: dave@example.com,  signup_date: '2026-03-10', country: GB }
+      - { user_id: u5, email: eve@example.com,   signup_date: '2026-04-01', country: IN }
+
+  - id: analytics.events
+    description: One row per user event (page view, click, etc.).
+    columns:
+      - { name: event_id, type: STRING, description: Unique event id. }
+      - { name: user_id, type: STRING, description: FK to analytics.users.user_id. }
+      - { name: event_type, type: STRING, description: e.g. page_view, click. }
+      - { name: ts, type: TIMESTAMP, description: Event timestamp. }
+    rows:
+      - { event_id: e1, user_id: u1, event_type: page_view, ts: '2026-04-20T10:00:00' }
+      - { event_id: e2, user_id: u1, event_type: click,     ts: '2026-04-20T10:01:00' }
+      - { event_id: e3, user_id: u2, event_type: page_view, ts: '2026-04-21T11:00:00' }
+      - { event_id: e4, user_id: u3, event_type: page_view, ts: '2026-04-22T09:30:00' }
+      - { event_id: e5, user_id: u3, event_type: click,     ts: '2026-04-22T09:31:00' }
+      - { event_id: e6, user_id: u5, event_type: page_view, ts: '2026-04-25T14:00:00' }
+
+  - id: ops.daily_metrics
+    description: One row per day with platform-wide metrics.
+    columns:
+      - { name: date, type: DATE, description: Metric day. }
+      - { name: dau, type: INT64, description: Daily active users. }
+      - { name: revenue_usd, type: FLOAT64, description: Daily revenue in USD. }
+    rows:
+      - { date: '2026-04-20', dau: 1234, revenue_usd: 456.78 }
+      - { date: '2026-04-21', dau: 1300, revenue_usd: 512.10 }
+      - { date: '2026-04-22', dau: 1450, revenue_usd: 599.25 }
