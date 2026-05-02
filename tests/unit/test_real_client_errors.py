@@ -55,6 +55,14 @@ def test_translate_unknown_falls_back() -> None:
     assert "something weird" in err.message
 
 
+def test_translate_deadline_exceeded() -> None:
+    from google.api_core import exceptions as gerr
+
+    exc = gerr.DeadlineExceeded("Deadline of 600.0s exceeded")
+    err = translate_bq_exception(exc)
+    assert err.code == "query_timeout"
+
+
 def test_to_dict_shape() -> None:
     err = BigQueryError(
         code="invalid_sql",
@@ -64,13 +72,27 @@ def test_to_dict_shape() -> None:
     d = err.to_dict()
     assert d["error"] == "invalid_sql"
     assert d["message"] == "bad"
-    assert d["sql"] == "SELECT * FRM"
+    assert d["details"] == {"sql": "SELECT * FRM"}
 
 
 def test_to_dict_no_details() -> None:
-    err = BigQueryError(code="x", message="y")
+    err = BigQueryError(code="unknown", message="no details here")
     d = err.to_dict()
-    assert d == {"error": "x", "message": "y"}
+    # details key is OMITTED when empty
+    assert d == {"error": "unknown", "message": "no details here"}
+
+
+def test_to_dict_details_cannot_overwrite_canonical_keys() -> None:
+    """Even if a caller puts 'error' or 'message' in details, the canonical fields stay correct."""
+    err = BigQueryError(
+        code="invalid_sql",
+        message="canonical",
+        details={"error": "spoof", "message": "spoof", "sql": "SELECT 1"},
+    )
+    d = err.to_dict()
+    assert d["error"] == "invalid_sql"
+    assert d["message"] == "canonical"
+    assert d["details"]["sql"] == "SELECT 1"  # type: ignore[index]
 
 
 def test_first_error_message_extracts_from_errors_list() -> None:
@@ -157,6 +179,15 @@ def test_sample_rows_translates_not_found() -> None:
     with pytest.raises(BigQueryError) as exc_info:
         client.sample_rows("analytics.nonexistent", n=5)
     assert exc_info.value.code == "table_not_found"
+
+
+def test_list_datasets_returns_empty_on_unauthenticated() -> None:
+    from google.api_core.exceptions import Unauthenticated
+
+    mock = MagicMock()
+    mock.list_datasets.side_effect = Unauthenticated("creds expired")
+    client = RealBigQueryClient(project="myproj", _client=mock)
+    assert client.list_datasets() == []
 
 
 # ---- Tool-layer integration ----

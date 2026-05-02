@@ -14,10 +14,15 @@ from __future__ import annotations
 
 from typing import Any
 
-from google.api_core.exceptions import NotFound, PermissionDenied
+from google.api_core.exceptions import (
+    GoogleAPICallError,
+    NotFound,
+    PermissionDenied,
+    Unauthenticated,
+)
 from google.cloud import bigquery
 
-from mcp_bigquery_evals.bq.errors import BigQueryError, translate_bq_exception
+from mcp_bigquery_evals.bq.errors import translate_bq_exception
 from mcp_bigquery_evals.bq.types import (
     Column,
     Dataset,
@@ -47,9 +52,15 @@ class RealBigQueryClient:
 
     def list_datasets(self) -> list[Dataset]:
         self._assert_open()
+        try:
+            items = list(self._client.list_datasets())
+        except (NotFound, PermissionDenied, Unauthenticated):
+            return []
+        # Other exceptions (ServiceUnavailable, network errors) propagate
+
         result: list[Dataset] = []
-        for ds_item in self._client.list_datasets():
-            # TODO(perf): N+1 — each get_dataset is a serial round trip; consider concurrent fetch.
+        for ds_item in items:
+            # TODO(perf): N+1 — each get_dataset is a serial round trip
             ds = self._client.get_dataset(ds_item.dataset_id)
             result.append(
                 Dataset(
@@ -64,8 +75,9 @@ class RealBigQueryClient:
         self._assert_open()
         try:
             items = list(self._client.list_tables(dataset_id))
-        except (NotFound, PermissionDenied):
-            # Treat missing/inaccessible datasets as empty (T6 will refine error contract)
+        except (NotFound, PermissionDenied, Unauthenticated):
+            # Treat missing/inaccessible datasets as empty — schema-traversal callers
+            # can't distinguish "missing" from "empty" anyway; [] is least-surprising.
             return []
         # Other exceptions (ServiceUnavailable, network errors) propagate to caller
         result: list[Table] = []
@@ -85,9 +97,7 @@ class RealBigQueryClient:
         self._assert_open()
         try:
             t = self._client.get_table(table_id)
-        except Exception as exc:
-            if isinstance(exc, BigQueryError):
-                raise
+        except GoogleAPICallError as exc:
             raise translate_bq_exception(exc) from exc
         columns = [
             Column(
@@ -112,9 +122,7 @@ class RealBigQueryClient:
         try:
             rows_iter = self._client.list_rows(table_id, max_results=n)
             return [dict(row.items()) for row in rows_iter]
-        except Exception as exc:
-            if isinstance(exc, BigQueryError):
-                raise
+        except GoogleAPICallError as exc:
             raise translate_bq_exception(exc) from exc
 
     def dry_run(self, sql: str) -> DryRunResult:
@@ -122,9 +130,7 @@ class RealBigQueryClient:
         job_config = bigquery.QueryJobConfig(dry_run=True, use_query_cache=False)
         try:
             job = self._client.query(sql, job_config=job_config)
-        except Exception as exc:
-            if isinstance(exc, BigQueryError):
-                raise
+        except GoogleAPICallError as exc:
             raise translate_bq_exception(exc) from exc
         bytes_scanned = int(job.total_bytes_processed or 0)
         return DryRunResult(
@@ -140,9 +146,7 @@ class RealBigQueryClient:
         try:
             job = self._client.query(sql)
             rows = [dict(row.items()) for row in job.result()]
-        except Exception as exc:
-            if isinstance(exc, BigQueryError):
-                raise
+        except GoogleAPICallError as exc:
             raise translate_bq_exception(exc) from exc
         elapsed_ms = int((_time.perf_counter() - start) * 1000)
         bytes_scanned = int(getattr(job, "total_bytes_processed", 0) or 0)
