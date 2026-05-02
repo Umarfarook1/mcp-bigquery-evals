@@ -70,7 +70,9 @@ class FakeBigQueryClient:
         return self._tables[table_id]
 
     def sample_rows(self, table_id: str, n: int) -> list[dict[str, object]]:
-        raise NotImplementedError  # Task 6
+        if table_id not in self._rows:
+            raise KeyError(table_id)
+        return list(self._rows[table_id][:n])
 
     def dry_run(self, sql: str) -> DryRunResult:
         raise NotImplementedError  # Task 7

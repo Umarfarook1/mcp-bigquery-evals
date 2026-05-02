@@ -47,3 +47,19 @@ def test_get_table_returns_schema(client: FakeBigQueryClient):
 def test_get_table_unknown_raises(client: FakeBigQueryClient):
     with pytest.raises(KeyError):
         client.get_table("analytics.nonexistent")
+
+
+def test_sample_rows_returns_n(client: FakeBigQueryClient):
+    rows = client.sample_rows("analytics.users", n=3)
+    assert len(rows) == 3
+    assert {"user_id", "email", "signup_date", "country"} <= set(rows[0].keys())
+
+
+def test_sample_rows_caps_at_total(client: FakeBigQueryClient):
+    rows = client.sample_rows("analytics.users", n=999)
+    assert len(rows) == 5  # only 5 rows in fixture
+
+
+def test_sample_rows_unknown_table_raises(client: FakeBigQueryClient):
+    with pytest.raises(KeyError):
+        client.sample_rows("analytics.nonexistent", n=1)
