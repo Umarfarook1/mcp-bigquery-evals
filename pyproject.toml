@@ -26,6 +26,7 @@ dev = [
     "pytest-asyncio>=0.23",
     "ruff>=0.6",
     "mypy>=1.10",
+    "types-PyYAML>=6.0",
 ]
 bq = [
     "google-cloud-bigquery>=3.0",
