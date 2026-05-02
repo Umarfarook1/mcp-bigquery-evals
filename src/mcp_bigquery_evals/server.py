@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
+from typing import cast
 
 from mcp.server.fastmcp import FastMCP
 
-from mcp_bigquery_evals.bq.fake import FakeBigQueryClient
 from mcp_bigquery_evals.bq.protocol import BigQueryClient
 from mcp_bigquery_evals.tools.describe_table import describe_table
 from mcp_bigquery_evals.tools.estimate_cost import estimate_cost
@@ -20,15 +20,23 @@ def build_client() -> BigQueryClient:
     """Wire up the BigQueryClient based on env vars.
 
     - MCP_BIGQUERY_FAKE_FIXTURE set → FakeBigQueryClient.from_yaml(...)
-    - otherwise → RealBigQueryClient (Plan B; raises NotImplementedError for now)
+    - otherwise → RealBigQueryClient with ADC + BIGQUERY_PROJECT
     """
     fake_path = os.environ.get("MCP_BIGQUERY_FAKE_FIXTURE")
     if fake_path:
+        from mcp_bigquery_evals.bq.fake import FakeBigQueryClient
+
         return FakeBigQueryClient.from_yaml(Path(fake_path))
-    raise NotImplementedError(
-        "RealBigQueryClient not yet implemented (Plan B). "
-        "Set MCP_BIGQUERY_FAKE_FIXTURE to use the fake client."
-    )
+
+    project = os.environ.get("BIGQUERY_PROJECT")
+    if not project:
+        raise RuntimeError(
+            "BIGQUERY_PROJECT env var is required (or set MCP_BIGQUERY_FAKE_FIXTURE for the fake)."
+        )
+
+    from mcp_bigquery_evals.bq.real import RealBigQueryClient
+
+    return cast(BigQueryClient, RealBigQueryClient(project=project))
 
 
 def build_server() -> FastMCP:
