@@ -1,0 +1,42 @@
+# Golden NL→SQL pairs targeting the FakeBigQueryClient fixture (fake_warehouse.yaml).
+# Used by unit tests for the eval harness — lets us develop the runner without GCP.
+# Real production pairs against bigquery-public-data live in src/mcp_bigquery_evals/evals/golden.yaml
+golden_pairs:
+  - id: 1
+    dataset: analytics
+    nl: "How many users are there in total?"
+    gold_sql: |
+      SELECT COUNT(*) AS n FROM `analytics.users`
+    tags: [count, simple]
+
+  - id: 2
+    dataset: analytics
+    nl: "How many users from India?"
+    gold_sql: |
+      SELECT COUNT(*) AS n FROM `analytics.users` WHERE country = 'IN'
+    tags: [count, filter]
+
+  - id: 3
+    dataset: analytics
+    nl: "List user emails for users in the US, sorted by user_id."
+    gold_sql: |
+      SELECT email FROM `analytics.users` WHERE country = 'US' ORDER BY user_id
+    tags: [select, filter, order]
+
+  - id: 4
+    dataset: analytics
+    nl: "How many events did each country generate? Order by country alphabetically."
+    gold_sql: |
+      SELECT u.country, COUNT(*) AS events
+      FROM `analytics.users` u
+      JOIN `analytics.events` e ON u.user_id = e.user_id
+      GROUP BY u.country
+      ORDER BY u.country
+    tags: [join, group_by, count]
+
+  - id: 5
+    dataset: ops
+    nl: "What is the maximum daily active users in the daily metrics table?"
+    gold_sql: |
+      SELECT MAX(dau) AS max_dau FROM `ops.daily_metrics`
+    tags: [aggregate, max]
