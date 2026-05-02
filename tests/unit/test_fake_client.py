@@ -138,3 +138,14 @@ def test_table_referenced_uses_word_boundary():
 
     assert _table_referenced("SELECT * FROM `analytics.users`", "analytics.users")
     assert not _table_referenced("SELECT * FROM `analytics.users_extended`", "analytics.users")
+
+
+def test_close_can_be_called_via_protocol(client: FakeBigQueryClient) -> None:
+    """The Protocol must expose close() so generic shutdown code works against any impl."""
+    bq_client: BigQueryClient = client  # widen to Protocol type
+    bq_client.close()  # must not raise
+
+
+def test_close_is_idempotent(client: FakeBigQueryClient) -> None:
+    client.close()
+    client.close()  # second call must not raise
