@@ -27,7 +27,12 @@ class BigQueryClient(Protocol):
 
     def dry_run(self, sql: str) -> DryRunResult: ...
 
-    def execute(self, sql: str) -> QueryResult: ...
+    def execute(self, sql: str, dry_run_result: DryRunResult | None = None) -> QueryResult:
+        """Execute SQL. If dry_run_result is provided, use it for cost fields without
+        a second dry-run call. If None, the implementation may dry-run internally
+        (or compute cost from execution metadata, e.g. job.total_bytes_processed).
+        """
+        ...
 
     def close(self) -> None:
         """Release any held resources (network connections, sqlite handles, etc.).

@@ -17,7 +17,7 @@ def run_query(
     if cap_err is not None:
         return cap_err
     try:
-        result = client.execute(sql)
+        result = client.execute(sql, dry_run_result=dr)
     except BigQueryError as e:
         return e.to_dict()
     except ValueError as e:
