@@ -97,6 +97,7 @@ class FakeBigQueryClient:
     def sample_rows(self, table_id: str, n: int) -> list[dict[str, object]]:
         if table_id not in self._rows:
             raise KeyError(table_id)
+        n = max(0, n)
         return list(self._rows[table_id][:n])
 
     def dry_run(self, sql: str) -> DryRunResult:
