@@ -3,6 +3,7 @@
 This bypasses the stdio transport and calls handlers directly via build_server().
 A separate stdio-protocol test is deferred to Plan B's CI integration.
 """
+
 from __future__ import annotations
 
 import json
@@ -105,9 +106,7 @@ async def test_describe_table() -> None:
 @pytest.mark.asyncio
 async def test_sample_table() -> None:
     server = build_server()
-    result = await server.call_tool(
-        "sample_table", {"table_id": "analytics.users", "n": 3}
-    )
+    result = await server.call_tool("sample_table", {"table_id": "analytics.users", "n": 3})
     payload = _unwrap_list(_parse_result(result))
     assert isinstance(payload, list)
     assert 1 <= len(payload) <= 3
@@ -129,9 +128,7 @@ async def test_search_schema() -> None:
 @pytest.mark.asyncio
 async def test_estimate_cost() -> None:
     server = build_server()
-    result = await server.call_tool(
-        "estimate_cost", {"sql": "SELECT * FROM `analytics.users`"}
-    )
+    result = await server.call_tool("estimate_cost", {"sql": "SELECT * FROM `analytics.users`"})
     payload = _parse_result(result)
     assert isinstance(payload, dict)
     assert "bytes_scanned" in payload

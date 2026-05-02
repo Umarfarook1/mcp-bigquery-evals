@@ -29,7 +29,6 @@ def check_cost_cap(
         "cap": format_bytes(max_bytes_scanned),
         "estimated_usd": dr.estimated_usd,
         "hint": (
-            "narrow your WHERE clause or pass "
-            f"max_bytes_scanned={dr.bytes_scanned} to override"
+            f"narrow your WHERE clause or pass max_bytes_scanned={dr.bytes_scanned} to override"
         ),
     }

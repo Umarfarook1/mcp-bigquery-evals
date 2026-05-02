@@ -11,7 +11,6 @@ def describe_table(client: BigQueryClient, table_id: str) -> dict[str, object]:
         "row_count": schema.table.row_count,
         "size_bytes": schema.table.size_bytes,
         "columns": [
-            {"name": c.name, "type": c.type, "description": c.description}
-            for c in schema.columns
+            {"name": c.name, "type": c.type, "description": c.description} for c in schema.columns
         ],
     }

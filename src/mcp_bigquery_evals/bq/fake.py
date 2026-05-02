@@ -160,6 +160,7 @@ class FakeBigQueryClient:
 
 # ---- Helpers ----
 
+
 def _estimate_size_bytes(columns: list[Column], rows: list[dict[str, Any]]) -> int:
     """Crude estimate: 32 bytes per cell."""
     return len(columns) * len(rows) * 32
