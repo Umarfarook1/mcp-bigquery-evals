@@ -16,6 +16,9 @@ dependencies = [
     "mcp>=1.27.0",
     "rapidfuzz>=3.0",
     "pyyaml>=6.0",
+    "google-cloud-bigquery>=3.20",
+    "anthropic>=0.40",
+    "python-dotenv>=1.0",
 ]
 
 [project.optional-dependencies]
@@ -25,9 +28,6 @@ dev = [
     "ruff>=0.6",
     "mypy>=1.10",
     "types-PyYAML>=6.0",
-]
-bq = [
-    "google-cloud-bigquery>=3.0",
 ]
 
 [project.scripts]
