@@ -3,13 +3,17 @@
 Spider/BIRD-style: two result sets are equal iff they match as multisets of rows,
 where rows are compared as sorted-by-column-name tuples and floats use a tolerance.
 NULLs compare equal to NULL. Column-set mismatch fails (the model added or removed
-a column).
+a column). BQ ARRAY (list) and STRUCT (dict) values are supported. Decimal values
+(BQ NUMERIC/BIGNUMERIC) use the same float tolerance as plain floats. bool and int
+are treated as distinct types even though Python's `True == 1` would suggest otherwise.
 """
 
 from __future__ import annotations
 
 from collections import Counter
-from math import isclose
+from collections.abc import Iterable
+from decimal import Decimal
+from math import isclose, isnan
 from typing import Any
 
 _FLOAT_REL_TOL = 1e-6
@@ -27,8 +31,8 @@ def results_equal(
         return True
 
     # Column sets must match
-    cols_a = set(a[0].keys()) if a else set()
-    cols_b = set(b[0].keys()) if b else set()
+    cols_a = set(a[0].keys())
+    cols_b = set(b[0].keys())
     if cols_a != cols_b:
         return False
 
@@ -37,25 +41,51 @@ def results_equal(
     rows_a = [_normalize_row(row, cols) for row in a]
     rows_b = [_normalize_row(row, cols) for row in b]
 
-    # If any row contains a float, fall back to manual comparison (Counter can't tolerance-match).
-    if any(_has_float(row) for row in rows_a + rows_b):
+    # If any row contains a float, Decimal, or nested structure, fall back to
+    # manual comparison (Counter can't tolerance-match or hash lists/dicts).
+    if any(_has_numeric(row) for row in rows_a + rows_b):
         return _multiset_equal_with_float_tolerance(rows_a, rows_b)
     return Counter(rows_a) == Counter(rows_b)
 
 
+def _to_hashable(v: Any) -> Any:
+    """Recursively convert lists and dicts to hashable equivalents."""
+    if isinstance(v, list):
+        return tuple(_to_hashable(item) for item in v)
+    if isinstance(v, dict):
+        return tuple(sorted((k, _to_hashable(val)) for k, val in v.items()))
+    return v
+
+
 def _normalize_row(row: dict[str, Any], cols: list[str]) -> tuple[Any, ...]:
-    return tuple(row.get(c) for c in cols)
+    return tuple(_to_hashable(row.get(c)) for c in cols)
 
 
-def _has_float(row: tuple[Any, ...]) -> bool:
-    return any(isinstance(v, float) for v in row)
+def _flatten(value: Any) -> Iterable[Any]:
+    """Yield all leaf values from a nested tuple.
+
+    Decimals/floats inside structs or arrays trigger the slow path too.
+    """
+    if isinstance(value, tuple):
+        for item in value:
+            yield from _flatten(item)
+    else:
+        yield value
+
+
+def _has_numeric(row: tuple[Any, ...]) -> bool:
+    return any(isinstance(v, (float, Decimal, bool)) for v in _flatten(row))
 
 
 def _multiset_equal_with_float_tolerance(
     rows_a: list[tuple[Any, ...]],
     rows_b: list[tuple[Any, ...]],
 ) -> bool:
-    """O(n^2) fallback for float-containing rows. Acceptable for eval result sets (small)."""
+    """O(n²) fallback for rows containing floats, Decimals, or nested structures.
+
+    Practical limit: ~1000 rows per result set (~0.5s in worst case).
+    Eval pairs producing larger result sets should add LIMIT.
+    """
     matched = [False] * len(rows_b)
     for ra in rows_a:
         found = False
@@ -75,14 +105,31 @@ def _row_equal(a: tuple[Any, ...], b: tuple[Any, ...]) -> bool:
     if len(a) != len(b):
         return False
     for va, vb in zip(a, b, strict=True):
-        if va is None and vb is None:
-            continue
-        if va is None or vb is None:
+        if not _value_equal(va, vb):
             return False
-        if isinstance(va, float) or isinstance(vb, float):
-            if not isclose(float(va), float(vb), rel_tol=_FLOAT_REL_TOL, abs_tol=_FLOAT_ABS_TOL):
-                return False
-        else:
-            if va != vb:
-                return False
     return True
+
+
+def _value_equal(va: Any, vb: Any) -> bool:
+    """Compare two values with NULL/NaN/Decimal/float/bool semantics."""
+    if va is None and vb is None:
+        return True
+    if va is None or vb is None:
+        return False
+    # bool must not compare equal to int (Python's True == 1 is misleading for evals)
+    if (isinstance(va, bool) or isinstance(vb, bool)) and type(va) is not type(vb):
+        return False
+    # Recursive: tuples (originally lists/structs)
+    if isinstance(va, tuple) and isinstance(vb, tuple):
+        return _row_equal(va, vb)
+    # NaN equality
+    if isinstance(va, float) and isinstance(vb, float):
+        if isnan(va) and isnan(vb):
+            return True
+    # Float / Decimal tolerance
+    if isinstance(va, (float, Decimal)) or isinstance(vb, (float, Decimal)):
+        try:
+            return isclose(float(va), float(vb), rel_tol=_FLOAT_REL_TOL, abs_tol=_FLOAT_ABS_TOL)
+        except (TypeError, ValueError):
+            return False
+    return bool(va == vb)
