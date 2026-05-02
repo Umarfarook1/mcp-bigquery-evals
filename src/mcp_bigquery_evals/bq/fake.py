@@ -150,7 +150,13 @@ class FakeBigQueryClient:
         return sql
 
     def close(self) -> None:
-        self._conn.close()
+        conn = getattr(self, "_conn", None)
+        if conn is not None:
+            try:
+                conn.close()
+            except Exception:
+                pass
+            self._conn = None  # type: ignore[assignment]
 
     def __del__(self) -> None:
         # Best-effort cleanup; safe even if __init__ raised before _conn was set.

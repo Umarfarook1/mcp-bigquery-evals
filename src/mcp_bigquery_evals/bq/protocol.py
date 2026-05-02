@@ -28,3 +28,10 @@ class BigQueryClient(Protocol):
     def dry_run(self, sql: str) -> DryRunResult: ...
 
     def execute(self, sql: str) -> QueryResult: ...
+
+    def close(self) -> None:
+        """Release any held resources (network connections, sqlite handles, etc.).
+
+        Implementations must make this idempotent — calling close() twice is a no-op.
+        """
+        ...
