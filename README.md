@@ -10,7 +10,7 @@
 [![Python](https://img.shields.io/pypi/pyversions/mcp-bigquery-evals.svg)](https://pypi.org/project/mcp-bigquery-evals/)
 [![License](https://img.shields.io/pypi/l/mcp-bigquery-evals.svg)](LICENSE)
 
-`uvx mcp-bigquery-evals` &nbsp;·&nbsp; works with Claude Desktop, Cursor, Claude Code &nbsp;·&nbsp; v0.1.0
+`uvx mcp-bigquery-evals` &nbsp;·&nbsp; works with any MCP-compatible client &nbsp;·&nbsp; v0.1.0
 
 </div>
 
@@ -50,9 +50,9 @@ First run takes about 30s while `uv` fetches dependencies; subsequent runs are i
 gcloud auth application-default login
 ```
 
-### 3. Wire into Claude Desktop
+### 3. Wire into your MCP client
 
-Open Claude Desktop, then Settings, then Developer, then Edit Config. Add:
+Open your MCP client's server config (developer settings) and add:
 
 ```json
 {
@@ -68,15 +68,15 @@ Open Claude Desktop, then Settings, then Developer, then Edit Config. Add:
 }
 ```
 
-Restart Claude Desktop. The MCP indicator should show "bigquery" with 7 tools.
+Restart your client. The MCP indicator should show "bigquery" with 7 tools.
 
 ### 4. Try it
 
 > Using the bigquery tool, find the top 5 most-viewed Stack Overflow questions tagged 'python'.
 
-Claude chains `list_datasets`, `list_tables`, `describe_table`, `run_query` to answer. Every `run_query` is dry-run-cost-capped before execution.
+The agent chains `list_datasets`, `list_tables`, `describe_table`, `run_query` to answer. Every `run_query` is dry-run-cost-capped before execution.
 
-Detailed setup, troubleshooting, and the alternative `pip` install path live in [`docs/claude_desktop_setup.md`](docs/claude_desktop_setup.md).
+Detailed setup, troubleshooting, and the alternative `pip` install path live in [`docs/mcp_client_setup.md`](docs/mcp_client_setup.md).
 
 ## The 7 tools
 
@@ -115,7 +115,7 @@ Every release runs a result-set-equivalence eval suite against `bigquery-public-
 Run locally:
 
 ```bash
-mcp-bigquery-evals evals run --model claude-haiku-4-5
+mcp-bigquery-evals evals run --model <your-model-id>
 ```
 
 Full methodology, golden-pairs YAML format, and how to add your own pairs: [`docs/how_evals_work.md`](docs/how_evals_work.md).

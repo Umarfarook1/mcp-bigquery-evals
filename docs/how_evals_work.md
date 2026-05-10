@@ -7,7 +7,7 @@ This document explains the methodology, the golden pairs format, and how to add 
 For each golden pair `{nl, gold_sql, dataset}`:
 
 1. Build a schema context (textual dump of every table in `dataset` + their columns + descriptions)
-2. Send the schema + the natural-language question to Claude (via the Anthropic API), asking for a single SQL query
+2. Send the schema + the natural-language question to an LLM, asking for a single SQL query
 3. Execute the gold SQL via BigQuery → `gold_result` (list of row dicts)
 4. Execute the model's predicted SQL via BigQuery → `predicted_result` (list of row dicts)
 5. Compare the two as multisets of rows (order-independent, with float tolerance, NULL equality, Decimal handling, NaN equality, ARRAY/STRUCT recursion, bool/int distinction)
@@ -61,7 +61,7 @@ Required keys: `id`, `dataset`, `nl`, `gold_sql`. Optional: `tags`, `verified`. 
 ## Running the harness
 
 ```bash
-mcp-bigquery-evals evals run --model claude-haiku-4-5
+mcp-bigquery-evals evals run --model <your-model-id>
 ```
 
 Optional flags:
@@ -89,9 +89,9 @@ The runner also writes a `badge.json` next to the report (consumed by shields.io
 Each golden pair costs:
 - ~1 BQ dry-run (free)
 - ~1 BQ query execution (typically ~1MB scanned ≈ $0.000005)
-- ~1 Anthropic API call (Haiku ~$0.0001 per pair)
+- ~1 LLM API call (varies by provider; small models are typically a fraction of a cent per pair)
 
-15 pairs at Haiku ≈ ~$0.002 per run. 50 pairs ≈ ~$0.007 per run. CI runs the full set on every main merge.
+15 pairs is roughly $0.002 per run on a small model. 50 pairs is roughly $0.007 per run. CI runs the full set on every main merge.
 
 The runner threads the dry-run result through to `execute()` so each pair only triggers ONE BQ dry-run + ONE BQ execute, not two of each.
 
@@ -99,10 +99,10 @@ The runner threads the dry-run result through to `execute()` so each pair only t
 
 To test a prompt change without paying full freight:
 ```bash
-mcp-bigquery-evals evals run --model claude-haiku-4-5 --limit 5
+mcp-bigquery-evals evals run --model <your-model-id> --limit 5
 ```
 
-Five pairs at Haiku is ~$0.0005 per iteration. Iterate fast.
+Five pairs on a small model is roughly $0.0005 per iteration. Iterate fast.
 
 ## How errors are reported
 

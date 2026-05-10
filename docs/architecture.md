@@ -5,7 +5,7 @@ This document explains the design decisions behind `mcp-bigquery-evals` v1. For 
 ## High-level shape
 
 ```
-Claude Desktop ⇄ stdio MCP ⇄ mcp-bigquery-evals server
+MCP client ⇄ stdio MCP ⇄ mcp-bigquery-evals server
                                        │
                               7 MCP tool handlers
                                        │
@@ -39,9 +39,9 @@ No `INSERT`, `UPDATE`, `DELETE`, `CREATE`, `DROP`. The blast radius of an LLM mi
 
 ### 4. No internal LLM calls in the server runtime
 
-The MCP server is deterministic. It does not call Claude, GPT, or any other LLM internally. The consumer (Claude Desktop) IS the LLM - it can summarize SQL, explain results, and reason about errors itself. Putting an LLM inside an MCP server whose only consumer is an LLM is a design smell.
+The MCP server is deterministic. It does not call any LLM internally. The MCP consumer (the agent itself) IS the LLM - it can summarize SQL, explain results, and reason about errors. Putting an LLM inside an MCP server whose only consumer is an LLM is a design smell.
 
-The eval harness is a separate process (`mcp-bigquery-evals evals run`) and DOES call Anthropic's API to generate predicted SQL. It does NOT touch the MCP server runtime.
+The eval harness is a separate process (`mcp-bigquery-evals evals run`) and DOES call an LLM API to generate predicted SQL. It does NOT touch the MCP server runtime.
 
 ### 5. Result-set equivalence for evals
 

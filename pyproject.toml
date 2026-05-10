@@ -6,7 +6,7 @@ readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }
 authors = [{ name = "Umarfarook Gurramkonda", email = "umarfarook0yt@gmail.com" }]
-keywords = ["mcp", "bigquery", "llm", "nl2sql", "claude", "evals", "agent", "tools"]
+keywords = ["mcp", "bigquery", "llm", "nl2sql", "evals", "agent", "tools"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",

@@ -28,11 +28,11 @@ Breaking changes to any of these require a major-version bump.
 - `RealBigQueryClient` (production) and `FakeBigQueryClient` (in-memory, sqlite-backed)
 - `BigQueryClient` Protocol seam for testability and future warehouse adapters
 - Result-set-equivalence eval harness (Spider/BIRD methodology) with NaN, Decimal, ARRAY/STRUCT, bool/int handling
-- `mcp-bigquery-evals evals run` CLI subcommand with Anthropic SDK adapter
+- `mcp-bigquery-evals evals run` CLI subcommand with a pluggable LLM-provider adapter
 - JSON report + shields.io endpoint badge writer
 - 15 golden NL-to-SQL pairs against `bigquery-public-data.samples` / `.stackoverflow` / `.usa_names` (UNVERIFIED at release; user verifies before publishing accuracy claims)
 - GitHub Actions: ruff/mypy/pytest CI on every PR; nightly evals on `main` push that auto-commits the badge
-- Documentation: README quickstart, Claude Desktop setup guide, architecture overview, eval harness walkthrough
+- Documentation: README quickstart, MCP client setup guide, architecture overview, eval harness walkthrough
 - PEP 561 `py.typed` marker - package ships type information to consumers
 
 ### Known limitations (planned for 0.1.x / 0.2.x)

@@ -6,9 +6,9 @@
 "Most AI agents that touch warehouses fail in three ways: cost, correctness, and unfounded confidence. Here's how I tried to fix all three in a weekend project."
 
 ### What I built
-- `mcp-bigquery-evals` - an MCP server for Claude Desktop / Cursor / Claude Code
+- `mcp-bigquery-evals` - an MCP server for any MCP-compatible client (Cursor, agent IDEs, etc.)
 - 7 read-only tools, mandatory dry-run cost caps, in-the-box result-set-equivalence eval harness with a live accuracy badge
-- Live in Claude Desktop in 5 minutes
+- Live in your MCP client in 5 minutes
 
 ### Three design decisions worth talking about
 
